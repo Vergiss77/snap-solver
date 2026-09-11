@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   }
 
   await app.listen({ port: config.port, host: "0.0.0.0" });
-  console.log(`remote-screen server listening on http://0.0.0.0:${config.port} (data: ${config.dataDir})`);
+  console.log(`snap-solver server listening on http://0.0.0.0:${config.port} (data: ${config.dataDir})`);
 
   // Re-dispatch any sessions recovered above or queued before boot.
   scheduler.tick();

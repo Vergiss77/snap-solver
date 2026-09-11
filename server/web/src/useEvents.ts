@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SessionEvent } from "@remote-screen/shared";
+import type { SessionEvent } from "@snap-solver/shared";
 
 /**
  * Subscribes to the server SSE stream. EventSource auto-reconnects; each

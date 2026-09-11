@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import hljs from "highlight.js";
-import type { RecordDetail, SessionSummary } from "@remote-screen/shared";
+import type { RecordDetail, SessionSummary } from "@snap-solver/shared";
 import { typeLabel } from "./HistoryList.tsx";
 
 function CodeBlock(props: { code: string; language?: string | null }): React.JSX.Element {

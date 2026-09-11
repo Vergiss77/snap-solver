@@ -1,4 +1,4 @@
-import { QuizType, type QuizResult } from "@remote-screen/shared";
+import { QuizType, type QuizResult } from "@snap-solver/shared";
 
 export const ANALYSIS_PROMPT = `你是一名全能解题助手。用户会给你一张电脑屏幕截图。
 

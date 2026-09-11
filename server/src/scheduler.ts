@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { QuizResult, SessionEvent, SessionSummary } from "@remote-screen/shared";
+import type { QuizResult, SessionEvent, SessionSummary } from "@snap-solver/shared";
 import type { Store } from "./db.ts";
 import { analyzeAnthropic, analyzeOpenAI } from "./llm/index.ts";
 

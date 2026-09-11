@@ -1,4 +1,4 @@
-import type { ProviderConfig, RecordDetail, SessionSummary } from "@remote-screen/shared";
+import type { ProviderConfig, RecordDetail, SessionSummary } from "@snap-solver/shared";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);

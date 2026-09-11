@@ -1,4 +1,4 @@
-import type { SessionSummary, QuizType } from "@remote-screen/shared";
+import type { SessionSummary, QuizType } from "@snap-solver/shared";
 
 const TYPE_LABELS: Record<QuizType, string> = {
   choice: "选择题",

@@ -1,5 +1,5 @@
 {
-  "name": "@remote-screen/server",
+  "name": "@snap-solver/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
   "dependencies": {
     "@fastify/multipart": "^9.0.3",
     "@fastify/static": "^8.2.0",
-    "@remote-screen/shared": "*",
+    "@snap-solver/shared": "*",
     "fastify": "^5.3.3",
     "pngjs": "^7.0.0"
   },

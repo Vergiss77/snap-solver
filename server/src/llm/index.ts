@@ -1,4 +1,4 @@
-import type { ProviderConfig, QuizResult } from "@remote-screen/shared";
+import type { ProviderConfig, QuizResult } from "@snap-solver/shared";
 import { ANALYSIS_PROMPT, parseQuizResult } from "./prompt.ts";
 
 export class ProviderError extends Error {

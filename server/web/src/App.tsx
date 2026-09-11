@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RecordDetail, SessionEvent, SessionSummary } from "@remote-screen/shared";
+import type { RecordDetail, SessionEvent, SessionSummary } from "@snap-solver/shared";
 import { api } from "./api.ts";
 import { useSessionEvents } from "./useEvents.ts";
 import { HistoryList } from "./HistoryList.tsx";
@@ -56,7 +56,7 @@ export function App(): React.JSX.Element {
   return (
     <div className="app">
       <nav className="topbar">
-        <strong>Remote Screen</strong>
+        <strong>Snap Solver</strong>
         <span className={connected ? "conn ok" : "conn bad"}>{connected ? "已连接" : "连接断开，重连中…"}</span>
         <button onClick={() => setShowConfig((v) => !v)}>{showConfig ? "返回题目" : "配置"}</button>
       </nav>

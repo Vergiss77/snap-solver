@@ -7,7 +7,7 @@ import type {
   RecordDetail,
   SessionStatus,
   SessionSummary,
-} from "@remote-screen/shared";
+} from "@snap-solver/shared";
 
 export class Store {
   private db: DatabaseSync;

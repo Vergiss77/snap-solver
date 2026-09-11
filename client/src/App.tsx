@@ -49,7 +49,7 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="settings">
-      <h1>Remote Screen 客户端</h1>
+      <h1>Snap Solver 客户端</h1>
       {notice && <p className="notice">{notice}</p>}
 
       <h2>截图快捷键</h2>

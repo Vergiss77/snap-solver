@@ -1,11 +1,11 @@
 [package]
-name = "remote-screen-client"
+name = "snap-solver-client"
 version = "0.1.0"
 edition = "2021"
 
 
 [lib]
-name = "remote_screen_client_lib"
+name = "snap_solver_client_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

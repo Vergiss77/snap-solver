@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    remote_screen_client_lib::run()
+    snap_solver_client_lib::run()
 }

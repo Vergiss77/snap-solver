@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 import type { FastifyInstance } from "fastify";
-import type { ProviderConfig, SessionEvent } from "@remote-screen/shared";
+import type { ProviderConfig, SessionEvent } from "@snap-solver/shared";
 import type { Store } from "./db.ts";
 import type { AnalysisScheduler } from "./scheduler.ts";
 import { MAX_CONCURRENCY_KEY } from "./scheduler.ts";
@@ -18,7 +18,7 @@ export interface RouteDeps {
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   const { store, scheduler } = deps;
 
-  app.get("/api/health", () => ({ name: "remote-screen-server", version: deps.version }));
+  app.get("/api/health", () => ({ name: "snap-solver-server", version: deps.version }));
 
   // ---- screenshot ingest ----
 

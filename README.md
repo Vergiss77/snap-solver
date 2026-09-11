@@ -38,14 +38,14 @@ cd server
 node src/index.ts           # 监听 0.0.0.0:17890, 数据存 ./data
 
 # 网页前端 (改动后需重新构建)
-npm run build -w @remote-screen/web
+npm run build -w @snap-solver/web
 
 # 客户端 (开发模式, 需要 Rust 工具链)
-npm run tauri -w @remote-screen/client -- dev
+npm run tauri -w @snap-solver/client -- dev
 
 # 客户端 (发布构建, 产出内嵌前端的独立 exe 与安装包)
-npm run tauri -w @remote-screen/client -- build
-# 产物: client/src-tauri/target/release/remote-screen-client.exe
+npm run tauri -w @snap-solver/client -- build
+# 产物: client/src-tauri/target/release/snap-solver-client.exe
 #       client/src-tauri/target/release/bundle/  (NSIS/MSI 安装包)
 ```
 
@@ -61,7 +61,7 @@ npm run tauri -w @remote-screen/client -- build
 ## 跨设备部署
 
 - **服务端到另一台机器**：拷贝 `package.json`、`package-lock.json`、`shared/`、`server/`（含 `web/dist`）→ 目标机 `npm install` → `node server/src/index.ts`。防火墙放行 TCP 17890
-- **客户端到另一台机器**：拷贝 release 版 `remote-screen-client.exe`（自包含，**不要用 `target/debug/` 下的版本**——debug 版设置窗口依赖 Vite 开发服务器）。设置中填入服务端 IP 即可
+- **客户端到另一台机器**：拷贝 release 版 `snap-solver-client.exe`（自包含，**不要用 `target/debug/` 下的版本**——debug 版设置窗口依赖 Vite 开发服务器）。设置中填入服务端 IP 即可
 
 ## 配置项
 

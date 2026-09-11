@@ -1,5 +1,5 @@
 {
-  "name": "remote-screen",
+  "name": "snap-solver",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "dev:server": "npm run dev -w server",
-    "dev:web": "npm run dev -w @remote-screen/web",
-    "build": "npm run build -w @remote-screen/web",
+    "dev:web": "npm run dev -w @snap-solver/web",
+    "build": "npm run build -w @snap-solver/web",
     "typecheck": "tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p server/web/tsconfig.json && tsc --noEmit -p shared/tsconfig.json"
   },
   "devDependencies": {

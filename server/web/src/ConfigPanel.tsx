@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ProviderConfig, ProviderProtocol } from "@remote-screen/shared";
+import type { ProviderConfig, ProviderProtocol } from "@snap-solver/shared";
 import { api } from "./api.ts";
 
 interface ProviderForm {
