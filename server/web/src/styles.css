@@ -1,67 +1,500 @@
+/* Snap Solver Web — 浅色薰衣草 SaaS 风格
+   白底 + 紫罗兰墨色：Deep Iris 标题/主按钮，Royal Amethyst 链接/焦点，
+   Mist Violet 氛围晕染，8px 圆角 + 1440px 胶囊，蓝调轻投影。 */
+
 :root {
-  color-scheme: dark;
-  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color-scheme: light;
+
+  /* 紫罗兰色板 */
+  --deep-iris: #26114a;
+  --plum-velvet: #312749;
+  --royal-amethyst: #3e0079;
+  --mist-violet: #edecff;
+  --lavender-glow: #b99aff;
+
+  /* 中性色板 */
+  --canvas: #ffffff;
+  --paper: #f6f7fa;
+  --mist: #e6e2e3;
+  --smoke: #c1c7cf;
+  --ash: #9491a1;
+  --slate: #615e6e;
+  --charcoal: #333333;
+
+  /* 状态语义色（低饱和，保持紫调家族的安静） */
+  --ok: #2e7d4f;
+  --ok-bg: #e4f3ea;
+  --err: #b3261e;
+  --err-bg: #fbeae8;
+
+  /* 字体 */
+  --font-ui: "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* 形状 */
+  --radius: 8px;
+  --radius-pill: 1440px;
+
+  /* 蓝调轻投影 */
+  --shadow-sm: rgba(18, 55, 105, 0.08) 0px 2px 4px 0px,
+    rgba(18, 55, 105, 0.04) 0px 1px 1px 0px,
+    rgba(18, 55, 105, 0.08) 0px 0px 0px 1px;
+  --shadow-lg: rgba(14, 59, 101, 0.06) 0px 32px 24px -12px,
+    rgba(14, 59, 101, 0.01) 0px 11px 4px 0px,
+    rgba(14, 59, 101, 0.02) 0px 6px 4px 0px,
+    rgba(14, 59, 101, 0.03) 0px 3px 3px 0px,
+    rgba(14, 59, 101, 0.04) 0px 1px 1px 0px;
 }
+
 * { box-sizing: border-box; }
-body { margin: 0; background: #0f1115; color: #e6e8ee; }
 
-.app { display: flex; flex-direction: column; height: 100vh; }
-.topbar {
-  display: flex; align-items: center; gap: 16px;
-  padding: 10px 16px; background: #171a21; border-bottom: 1px solid #262b36;
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--charcoal);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
 }
-.topbar button { margin-left: auto; }
-.conn.ok { color: #4ade80; }
-.conn.bad { color: #f87171; }
 
+/* 页面顶部的薰衣草氛围：白到 Mist Violet 的垂直晕染，永远沉在最底层 */
+.app::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: 340px;
+  background: linear-gradient(180deg, var(--mist-violet) 0%, rgba(237, 236, 255, 0) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+::selection { background: var(--mist-violet); color: var(--deep-iris); }
+
+/* ---------- 动效 ---------- */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.reveal { animation: rise 0.5s ease both; }
+.reveal.d1 { animation-delay: 0.12s; }
+.reveal.d2 { animation-delay: 0.26s; }
+.reveal.d3 { animation-delay: 0.4s; }
+
+/* ---------- 布局骨架 ---------- */
+
+.app { position: relative; display: flex; flex-direction: column; height: 100vh; z-index: 1; }
+
+/* 浮动顶栏：白色胶囊条 + 蓝调轻投影 */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  margin: 14px 16px 0;
+  padding: 8px 14px;
+  background: var(--canvas);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.logo { display: inline-flex; align-items: center; gap: 9px; }
+
+.logo .mark {
+  width: 15px; height: 15px;
+  background: linear-gradient(135deg, var(--lavender-glow), #7d43ff);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.wordmark {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--deep-iris);
+}
+
+/* 连接状态：胶囊标签 */
+.conn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.conn .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.conn.ok { background: var(--ok-bg); color: var(--ok); }
+.conn.ok .dot { animation: breathe 2.4s ease-in-out infinite; }
+.conn.bad { background: var(--err-bg); color: var(--err); }
+
+.topbar .spacer { margin-left: auto; }
+
+/* 新题到达提示：Mist Violet 晕染条 */
 .banner {
   display: flex; gap: 12px; align-items: center;
-  padding: 8px 16px; background: #22304a; border-bottom: 1px solid #31435f;
+  margin: 12px 16px 0;
+  padding: 10px 16px;
+  background: var(--mist-violet);
+  border-radius: var(--radius);
+  color: var(--royal-amethyst);
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.content { display: flex; flex: 1; min-height: 0; }
+.banner .spacer { margin-left: auto; display: flex; gap: 8px; }
+
+/* ---------- 历史侧栏：浮动圆角面板 + 胶囊条目 ---------- */
+
+.content { display: flex; flex: 1; min-height: 0; margin-top: 12px; padding: 0 16px 12px; gap: 12px; }
+
 .history {
-  width: 280px; overflow-y: auto; padding: 12px;
-  border-right: 1px solid #262b36; background: #13161c;
+  width: 280px; overflow-y: auto;
+  padding: 8px 0;
+  background: var(--canvas);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
-.history h2 { font-size: 14px; margin: 0 0 8px; }
-.history ul { list-style: none; margin: 0; padding: 0; }
+
+.history h2 {
+  margin: 0 0 6px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+
+.history ul { list-style: none; margin: 0; padding: 0 10px; }
+
+/* 胶囊条目：1440px 全圆角 */
 .history-item {
   display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 10px; margin-bottom: 6px; border-radius: 8px;
-  background: #1a1e27; cursor: pointer; border: 1px solid transparent;
+  margin-bottom: 4px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
-.history-item.selected { border-color: #4f7cff; }
-.history-item .time { font-size: 12px; color: #8b93a5; }
 
-.badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; width: fit-content; }
-.badge-pending { background: #3a3f4c; }
-.badge-analyzing { background: #6b5d1f; color: #ffe08a; }
-.badge-done { background: #1f4d2e; color: #7ee2a8; }
-.badge-failed { background: #5c2525; color: #ff9d9d; }
+.history-item:hover { background: var(--paper); }
 
-.session-view { flex: 1; overflow-y: auto; padding: 20px 28px; }
-.session-view header { display: flex; align-items: center; gap: 12px; }
-.session-view h1 { font-size: 20px; margin: 0; }
-.screenshot { max-width: 720px; width: 100%; border-radius: 8px; border: 1px solid #262b36; margin: 16px 0; }
-.answer, .reasoning { white-space: pre-wrap; line-height: 1.7; }
-pre { background: #0b0d11; padding: 14px; border-radius: 8px; overflow-x: auto; }
-.muted { color: #8b93a5; }
-.error { color: #ff9d9d; white-space: pre-wrap; }
+.history-item.selected { background: var(--mist-violet); }
 
-.config { padding: 20px 28px; max-width: 640px; overflow-y: auto; }
-.config h3 { margin: 20px 0 8px; font-size: 15px; }
-.row { display: flex; gap: 8px; align-items: center; }
-.providers { list-style: none; padding: 0; }
-.providers li { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #262b36; }
-.provider-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #aab1c2; }
-input, select {
-  background: #1a1e27; border: 1px solid #2c3342; color: inherit;
-  border-radius: 6px; padding: 8px 10px; font-size: 14px;
+.history-item .type { font-size: 14px; font-weight: 500; color: var(--plum-velvet); }
+.history-item.selected .type { color: var(--deep-iris); }
+
+.history-item .meta {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ash);
 }
+
+.history-item .time { font-family: var(--font-mono); font-size: 11px; }
+
+/* 状态徽记：胶囊标签（1440px，Inter 500 12px） */
+.status-mark {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--paper);
+  color: var(--slate);
+}
+
+.status-mark .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.status-mark.status-analyzing { background: var(--mist-violet); color: var(--royal-amethyst); }
+.status-mark.status-analyzing .dot { animation: breathe 1.6s ease-in-out infinite; }
+.status-mark.status-done { background: var(--ok-bg); color: var(--ok); }
+.status-mark.status-failed { background: var(--err-bg); color: var(--err); }
+
+/* ---------- 会话详情主视图 ---------- */
+
+.session-view { flex: 1; overflow-y: auto; padding: 24px 32px 64px; }
+
+/* 空状态：整体水平垂直居中 */
+.session-view.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-view.empty p { margin: 0; }
+
+.session-view .column { max-width: 760px; margin: 0 auto; }
+
+.session-view header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* 几何标题：Plus Jakarta Sans 500，1.0 紧行高，Deep Iris */
+.session-view h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--deep-iris);
+}
+
+/* 截图：白框卡片 + 分层轻投影，浮在薰衣草氛围上 */
+.screenshot {
+  display: block;
+  max-width: 720px; width: 100%;
+  background: var(--canvas);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  margin: 0 0 24px;
+}
+
+/* 解答卡片：白色表面 + 发丝描边 */
+.paper {
+  max-width: 68ch;
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+}
+
+/* 章节标：Mist Violet 胶囊标签 */
+.section-title {
+  display: inline-block;
+  margin: 24px 0 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--mist-violet);
+  color: var(--royal-amethyst);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.section-title:first-child { margin-top: 0; }
+
+.answer, .reasoning {
+  display: block;
+  white-space: pre-wrap;
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--charcoal);
+}
+
+/* 代码块：Deep Iris 深紫底，紫调暮光高亮 */
+pre {
+  background: var(--deep-iris);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+pre code { font-family: inherit; background: none; padding: 0; }
+
+.muted { color: var(--ash); }
+.error { color: var(--err); white-space: pre-wrap; }
+
+/* highlight.js 暮光紫调主题（取自 twilight beam 装饰色系） */
+.hljs { color: #e6e1f5; background: transparent; }
+.hljs-comment, .hljs-quote { color: #8f86a8; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-template-tag { color: #cf8aff; }
+.hljs-string, .hljs-regexp, .hljs-addition { color: #ffad74; }
+.hljs-number, .hljs-literal, .hljs-symbol { color: #ff9ad5; }
+.hljs-title, .hljs-title.function_, .hljs-section { color: #f0e9ff; }
+.hljs-built_in, .hljs-type, .hljs-class { color: #aa81ff; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable { color: #c3b8dd; }
+.hljs-name, .hljs-selector-id, .hljs-selector-class { color: #d3b8ff; }
+.hljs-meta, .hljs-deletion { color: #8f86a8; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+/* ---------- 按钮：品牌实心 / 幽灵描边 / 危险文字 ---------- */
+
 button {
-  background: #2c3347; border: 1px solid #3a4358; color: inherit;
-  border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--royal-amethyst);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-button:hover { background: #36405a; }
-.notice { color: #7ee2a8; }
+
+button:hover { background: var(--mist-violet); }
+button:disabled { color: var(--ash); cursor: default; background: none; }
+
+/* 顶栏内的按钮做成胶囊导航项 */
+.topbar button { border-radius: var(--radius-pill); color: var(--plum-velvet); }
+.topbar button:hover { background: var(--mist-violet); }
+
+button.btn-primary {
+  background: var(--deep-iris);
+  color: var(--canvas);
+  border-color: var(--deep-iris);
+}
+
+button.btn-primary:hover { background: var(--plum-velvet); }
+
+button.btn-ghost {
+  border-color: var(--deep-iris);
+  color: var(--deep-iris);
+}
+
+button.btn-ghost:hover { background: var(--mist-violet); }
+
+button.btn-danger { color: var(--err); }
+button.btn-danger:hover { background: var(--err-bg); }
+
+/* ---------- 表单 ---------- */
+
+input, select {
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  color: var(--charcoal);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input::placeholder { color: var(--ash); }
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--royal-amethyst);
+  box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.18);
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.28);
+}
+
+/* ---------- 配置面板 ---------- */
+
+.config { flex: 1; padding: 24px 32px 64px; overflow-y: auto; }
+.config .column { max-width: 640px; margin: 0 auto; }
+
+.config h2 {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--deep-iris);
+}
+
+.config h3 {
+  margin: 28px 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--slate);
+}
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.providers {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  border-radius: var(--radius);
+}
+
+.providers li {
+  display: flex; gap: 8px; align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--mist);
+  transition: background 0.15s ease;
+}
+
+.providers li:last-child { border-bottom: none; }
+.providers li:hover { background: var(--paper); }
+.providers li.active { background: var(--mist-violet); }
+.providers li > span:first-child { flex: 1; min-width: 0; font-size: 14px; color: var(--plum-velvet); }
+
+.providers li button { padding: 5px 10px; font-size: 12px; }
+
+.providers code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--slate);
+  background: var(--paper);
+  border: 1px solid var(--mist);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin: 0 4px;
+}
+
+.provider-form {
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+}
+
+.provider-form label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--slate);
+}
+
+.notice { color: var(--ok); font-size: 14px; }
+
+/* ---------- 响应式：窄屏抽屉 ---------- */
+
+.history-toggle, .overlay { display: none; }
+
+@media (max-width: 760px) {
+  .topbar { margin: 10px 10px 0; }
+  .banner { margin: 10px 10px 0; flex-wrap: wrap; }
+  .banner .spacer { margin-left: 0; }
+
+  .history-toggle { display: inline; }
+
+  .history {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 30;
+    width: 264px;
+    padding-top: 24px;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    border-radius: 0;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .history.open { transform: none; }
+
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(38, 17, 74, 0.18);
+  }
+
+  .session-view { padding: 18px 16px 48px; }
+  .config { padding: 18px 16px 48px; }
+  .paper { padding: 18px 18px; }
+  .session-view h1 { font-size: 24px; }
+  .config h2 { font-size: 24px; }
+}
