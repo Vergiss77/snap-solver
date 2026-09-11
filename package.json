@@ -1,0 +1,20 @@
+{
+  "name": "remote-screen",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "server/web",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w @remote-screen/web",
+    "build": "npm run build -w @remote-screen/web",
+    "typecheck": "tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p server/web/tsconfig.json && tsc --noEmit -p shared/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+data/
+.tmp-test/
+*.local
+.DS_Store
+
+.agents/
+.claude/
+.omp/

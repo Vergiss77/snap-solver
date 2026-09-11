@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default capability: custom commands only; all OS interaction lives in Rust.",
+  "windows": ["settings"],
+  "permissions": ["core:default"]
+}
