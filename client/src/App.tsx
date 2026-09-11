@@ -25,7 +25,12 @@ export function App(): React.JSX.Element {
     try {
       const next = await saveConfig({ serverHost: host, serverPort: port, hotkey });
       setState(next);
-      setNotice(next.hotkeyActive ? "已保存，快捷键已生效" : "已保存，但快捷键注册失败（可能被其他应用占用）");
+      if (next.hotkeyError) {
+        setNotice(`已保存（服务端地址已更新），但快捷键未更换：${next.hotkeyError}，仍沿用原快捷键`);
+        setHotkey(next.config.hotkey);
+      } else {
+        setNotice(next.hotkeyActive ? "已保存，快捷键已生效" : "已保存，但快捷键未生效");
+      }
     } catch (e) {
       setNotice(`保存失败：${String(e)}`);
     }

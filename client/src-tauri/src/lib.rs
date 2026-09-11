@@ -47,8 +47,10 @@ fn load_config(app: &AppHandle) -> ClientConfig {
 #[serde(rename_all = "camelCase")]
 pub struct ClientState {
     pub config: ClientConfig,
-    /// Whether the configured hotkey is currently registered.
+    /// Whether a hotkey is currently registered and working.
     pub hotkey_active: bool,
+    /// Last registration failure, if any (kept until a save succeeds).
+    pub hotkey_error: Option<String>,
     /// macOS screen-recording permission; always true elsewhere.
     pub screen_permission: bool,
     pub platform: String,
@@ -56,17 +58,21 @@ pub struct ClientState {
 
 pub struct AppState {
     pub config: Mutex<ClientConfig>,
-    pub hotkey_active: Mutex<bool>,
+    /// Currently registered shortcut; None when registration never succeeded.
+    pub registered: Mutex<Option<Shortcut>>,
+    pub hotkey_error: Mutex<Option<String>>,
 }
 
 fn snapshot(state: &State<'_, AppState>) -> ClientState {
     ClientState {
         config: state.config.lock().clone(),
-        hotkey_active: *state.hotkey_active.lock(),
+        hotkey_active: state.registered.lock().is_some(),
+        hotkey_error: state.hotkey_error.lock().clone(),
         screen_permission: screen_capture_permitted(),
         platform: std::env::consts::OS.into(),
     }
 }
+
 
 // ---------- permissions ----------
 
@@ -159,20 +165,44 @@ fn trigger_capture(app: AppHandle) {
 
 // ---------- hotkey registration ----------
 
-fn register_hotkey(app: &AppHandle, accelerator: &str) -> Result<(), String> {
+/// OS-reserved chords that must never become our trigger (macOS app-level
+/// shortcuts like Cmd+W/Q, window switching, etc.).
+const RESERVED: &[&str] = &[
+    "CommandOrControl+Q",
+    "CommandOrControl+W",
+    "CommandOrControl+M",
+    "CommandOrControl+H",
+    "CommandOrControl+Tab",
+    "CommandOrControl+Space",
+    "Alt+F4",
+    "Alt+Tab",
+    "Alt+Escape",
+    "CommandOrControl+Alt+Delete",
+];
+
+fn normalized(accel: &str) -> String {
+    accel.split('+').map(|p| p.trim().to_lowercase()).collect::<Vec<_>>().join("+")
+}
+
+/// Register WITHOUT touching the currently registered shortcut — callers swap
+/// on success so a failed attempt never kills the working hotkey.
+fn try_register(app: &AppHandle, accelerator: &str) -> Result<Shortcut, String> {
+    let norm = normalized(accelerator);
+    if RESERVED.iter().any(|r| normalized(r) == norm) {
+        return Err(format!("{accelerator} 与系统快捷键冲突，请换一个组合"));
+    }
     let shortcut: Shortcut = accelerator
         .parse()
-        .map_err(|_| format!("invalid accelerator: {accelerator}"))?;
-    let gs = app.global_shortcut();
-    let _ = gs.unregister_all();
+        .map_err(|_| format!("无效的快捷键组合: {accelerator}"))?;
     let handle = app.clone();
-    gs.on_shortcut(shortcut, move |_app, _shortcut, _event| {
-        if _event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-            trigger_capture(handle.clone());
-        }
-    })
-    .map_err(|e| format!("register failed (occupied?): {e}"))?;
-    Ok(())
+    app.global_shortcut()
+        .on_shortcut(shortcut.clone(), move |_app, _shortcut, event| {
+            if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                trigger_capture(handle.clone());
+            }
+        })
+        .map_err(|e| format!("注册失败（可能被其他应用占用）: {e}"))?;
+    Ok(shortcut)
 }
 
 // ---------- Tauri commands (settings window API) ----------
@@ -182,20 +212,56 @@ fn get_state(state: State<'_, AppState>) -> ClientState {
     snapshot(&state)
 }
 
+/// While the recorder input is focused, suspend the global hotkey so the
+/// currently-registered chord reaches the webview (OS routes registered
+/// hotkeys to the app, not the focused window). Resumed on blur.
 #[tauri::command]
-fn save_config(app: AppHandle, state: State<'_, AppState>, config: ClientConfig) -> Result<ClientState, String> {
-    {
-        *state.config.lock() = config.clone();
+fn set_recording(app: AppHandle, state: State<'_, AppState>, active: bool) {
+    if active {
+        if let Some(sc) = state.registered.lock().take() {
+            let _ = app.global_shortcut().unregister(sc);
+        }
+    } else if state.registered.lock().is_none() {
+        let hotkey = state.config.lock().hotkey.clone();
+        match try_register(&app, &hotkey) {
+            Ok(sc) => *state.registered.lock() = Some(sc),
+            Err(e) => *state.hotkey_error.lock() = Some(e),
+        }
     }
+}
+
+#[tauri::command]
+fn save_config(app: AppHandle, state: State<'_, AppState>, mut config: ClientConfig) -> Result<ClientState, String> {
+    // Swap hotkey first: register the new chord before dropping the old one.
+    let effective_hotkey = {
+        let current = state.config.lock().hotkey.clone();
+        if normalized(&config.hotkey) == normalized(&current) {
+            current
+        } else {
+            match try_register(&app, &config.hotkey) {
+                Ok(new_sc) => {
+                    if let Some(old) = state.registered.lock().replace(new_sc) {
+                        let _ = app.global_shortcut().unregister(old);
+                    }
+                    *state.hotkey_error.lock() = None;
+                    config.hotkey.clone()
+                }
+                Err(e) => {
+                    // Keep the working hotkey; persist it, not the rejected one.
+                    *state.hotkey_error.lock() = Some(e);
+                    current
+                }
+            }
+        }
+    };
+    config.hotkey = effective_hotkey;
+    *state.config.lock() = config.clone();
     let path = config_path(&app);
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
     std::fs::write(&path, serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())?;
-    // Hot-re-register with the (possibly new) accelerator.
-    let ok = register_hotkey(&app, &config.hotkey).is_ok();
-    *state.hotkey_active.lock() = ok;
     Ok(snapshot(&state))
 }
 
@@ -225,7 +291,17 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(AppState {
             config: Mutex::new(ClientConfig::default()),
-            hotkey_active: Mutex::new(false),
+            registered: Mutex::new(None),
+            hotkey_error: Mutex::new(None),
+        })
+        .on_window_event(|window, event| {
+            // Closing the settings window hides it; the client stays resident in the tray.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "settings" {
+                    let _ = window.hide();
+                    api.prevent_close();
+                }
+            }
         })
         .setup(|app| {
             let config = load_config(app.handle());
@@ -249,11 +325,13 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            let ok = register_hotkey(app.handle(), &config.hotkey).is_ok();
-            *app.state::<AppState>().hotkey_active.lock() = ok;
+            match try_register(app.handle(), &config.hotkey) {
+                Ok(sc) => *app.state::<AppState>().registered.lock() = Some(sc),
+                Err(e) => *app.state::<AppState>().hotkey_error.lock() = Some(e),
+            }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_state, save_config, test_connection])
+        .invoke_handler(tauri::generate_handler![get_state, save_config, test_connection, set_recording])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
