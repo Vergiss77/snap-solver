@@ -51,6 +51,8 @@ node src/index.ts        # 监听 0.0.0.0:17890
 - **Windows**：SmartScreen 弹窗 →"更多信息"→"仍要运行"
 - **macOS**：右键 app →"打开"（或在 系统设置 → 隐私与安全性 中点"仍要打开"）；随后在系统提示中授予"屏幕录制"与"输入监控"权限
 
+> tip: 在macOS下会遇到提示“已损坏，无法打开“的提示，这是预期内的行为，请在终端执行 `sudo xattr -d com.apple.quarantine /Applications/snap-solver-client.app` 来解除
+
 ## 第二步：查服务端机器的局域网 IP
 
 客户端和浏览器都要用服务端机器的局域网 IP 来连接。在**运行服务端的机器**上查询：
