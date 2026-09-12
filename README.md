@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="client/src-tauri/icons/app-icon.png" width="128" alt="snap-solver 图标" />
+</p>
+
 # snap-solver
 
 局域网截图解题工具：一台电脑按快捷键静默截屏，另一台（或同一台）电脑上的服务端自动调用多模态大模型识别题目（选择/填空/简答/编程）并生成解答，结果在网页界面实时展示并自动归档。
