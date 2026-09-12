@@ -16,10 +16,13 @@ export const ANALYSIS_PROMPT = `你是一名全能解题助手。用户会给你
 - 简答题：给出完整、条理清晰的参考答案。
 - 编程题：给出解题思路（算法选择、复杂度分析）和完整可运行的代码实现。
 
+第四步：如果是题目，用不超过 15 个字概括题目所问，作为题旨标题（如"求二叉树最大深度"）。
+
 你必须只输出一个 JSON 对象，不要输出任何其他文字、解释或 Markdown 代码围栏。JSON 结构如下：
 {
   "isQuiz": true 或 false,
   "type": "choice" | "fill_blank" | "short_answer" | "programming" | "not_quiz",
+  "title": "题旨标题（不超过 15 字；非题目时省略此字段或为空字符串）",
   "answer": "答案正文（非题目时为空字符串）",
   "reasoning": "解题思路与解析（非题目时为空字符串）",
   "code": "完整代码（仅编程题，其他题型省略此字段或为空字符串）",
@@ -60,6 +63,7 @@ export function parseQuizResult(raw: string): QuizResult {
   return {
     isQuiz,
     type,
+    title: typeof obj.title === "string" && obj.title.trim().length > 0 ? obj.title.trim() : undefined,
     answer: typeof obj.answer === "string" ? obj.answer : "",
     reasoning: typeof obj.reasoning === "string" ? obj.reasoning : "",
     code: typeof obj.code === "string" && obj.code.length > 0 ? obj.code : undefined,

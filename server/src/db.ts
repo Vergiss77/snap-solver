@@ -31,6 +31,7 @@ export class Store {
       CREATE TABLE IF NOT EXISTS records (
         session_id TEXT PRIMARY KEY REFERENCES sessions(id),
         quiz_type TEXT NOT NULL,
+        title TEXT,
         answer TEXT NOT NULL,
         reasoning TEXT NOT NULL,
         code TEXT,
@@ -50,6 +51,12 @@ export class Store {
         value TEXT NOT NULL
       );
     `);
+    // Migration: older databases lack records.title — add it, ignoring "duplicate column".
+    try {
+      this.db.exec("ALTER TABLE records ADD COLUMN title TEXT");
+    } catch {
+      /* column already exists */
+    }
   }
 
   // ---- sessions ----
@@ -62,7 +69,7 @@ export class Store {
         "INSERT INTO sessions (id, status, image_path, client_ts, created_at) VALUES (?, 'pending', ?, ?, ?)",
       )
       .run(id, imagePath, clientTs, createdAt);
-    return { id, status: "pending", clientTs, createdAt, finishedAt: null, quizType: null, error: null };
+    return { id, status: "pending", clientTs, createdAt, finishedAt: null, quizType: null, title: null, error: null };
   }
 
   setSessionStatus(id: string, status: SessionStatus, extra?: { error?: string; rawResponse?: string }): void {
@@ -96,7 +103,7 @@ export class Store {
   getSession(id: string): SessionSummary | null {
     const row = this.db
       .prepare(
-        `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, r.quiz_type
+        `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, r.quiz_type, r.title
          FROM sessions s LEFT JOIN records r ON r.session_id = s.id WHERE s.id = ?`,
       )
       .get(id) as Record<string, unknown> | undefined;
@@ -115,6 +122,7 @@ export class Store {
   insertRecord(rec: {
     sessionId: string;
     quizType: QuizType;
+    title: string | null;
     answer: string;
     reasoning: string;
     code: string | null;
@@ -122,15 +130,15 @@ export class Store {
   }): void {
     this.db
       .prepare(
-        "INSERT OR REPLACE INTO records (session_id, quiz_type, answer, reasoning, code, code_language) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO records (session_id, quiz_type, title, answer, reasoning, code, code_language) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(rec.sessionId, rec.quizType, rec.answer, rec.reasoning, rec.code, rec.codeLanguage);
+      .run(rec.sessionId, rec.quizType, rec.title, rec.answer, rec.reasoning, rec.code, rec.codeLanguage);
   }
 
   listRecords(): SessionSummary[] {
     const rows = this.db
       .prepare(
-        `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, r.quiz_type
+        `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, r.quiz_type, r.title
          FROM sessions s LEFT JOIN records r ON r.session_id = s.id
          ORDER BY s.created_at DESC`,
       )
@@ -142,7 +150,7 @@ export class Store {
     const row = this.db
       .prepare(
         `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, s.raw_response,
-                r.quiz_type, r.answer, r.reasoning, r.code, r.code_language
+                r.quiz_type, r.title, r.answer, r.reasoning, r.code, r.code_language
          FROM sessions s LEFT JOIN records r ON r.session_id = s.id WHERE s.id = ?`,
       )
       .get(id) as Record<string, unknown> | undefined;
@@ -223,6 +231,7 @@ function toSummary(row: Record<string, unknown>): SessionSummary {
     createdAt: row.created_at as string,
     finishedAt: (row.finished_at as string) ?? null,
     quizType: (row.quiz_type as QuizType) ?? null,
+    title: (row.title as string) ?? null,
     error: (row.error as string) ?? null,
   };
 }

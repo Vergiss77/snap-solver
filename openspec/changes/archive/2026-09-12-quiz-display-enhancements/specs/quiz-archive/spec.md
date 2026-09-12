@@ -1,10 +1,6 @@
-# Quiz Archive Specification
+# Delta: quiz-archive
 
-## Purpose
-
-题目持久化能力：分析完成的会话自动归档为题目记录，包含截图原图、题型、解答与时间戳，以 SQLite 单文件加图片文件的形式存储，支持历史查询与回顾。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 自动归档
 
@@ -38,12 +34,3 @@ session 进入 done 状态时 SHALL 自动落为一条题目记录，记录 MUST
 
 - **WHEN** 前端按 ID 请求某条题目
 - **THEN** 返回该记录的完整内容：截图图像可访问地址、题型、题旨标题、解答全文、代码、各时间戳与状态
-
-### Requirement: 存储形态
-
-持久化 SHALL 使用单个 SQLite 数据库文件存放结构化记录，截图图像 MUST 以文件形式存放在数据目录下，数据库中仅存相对路径引用。数据目录位置 MUST 可配置。
-
-#### Scenario: 图像与记录一致性
-
-- **WHEN** 数据库中存在一条题目记录
-- **THEN** 其引用的截图图像文件存在于数据目录中，且可通过服务端接口访问

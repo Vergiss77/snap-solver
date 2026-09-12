@@ -21,6 +21,8 @@ export type QuizType = (typeof QuizType)[keyof typeof QuizType];
 export interface QuizResult {
   isQuiz: boolean;
   type: QuizType;
+  /** Short gist title (<=15 chars) summarizing the question, e.g. "求二叉树最大深度". */
+  title?: string;
   /** The answer itself (selected option, filled blanks, short answer, or summary for programming). */
   answer: string;
   /** Step-by-step reasoning / solution walkthrough. */
@@ -50,6 +52,8 @@ export interface SessionSummary {
   createdAt: string;
   finishedAt: string | null;
   quizType: QuizType | null;
+  /** Gist title from the LLM analysis; null for old records or unparseable responses. */
+  title: string | null;
   error: string | null;
 }
 

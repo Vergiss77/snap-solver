@@ -77,6 +77,7 @@ export class AnalysisScheduler {
     this.store.insertRecord({
       sessionId: id,
       quizType: result.type,
+      title: result.title ?? null,
       answer: result.answer,
       reasoning: result.reasoning,
       code: result.code ?? null,

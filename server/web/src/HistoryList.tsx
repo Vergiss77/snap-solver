@@ -46,7 +46,10 @@ export function HistoryList(props: {
             className={`history-item status-${s.status} ${s.id === props.selectedId ? "selected" : ""}`}
             onClick={() => props.onSelect(s.id)}
           >
-            <span className="type">{typeLabel(s.quizType)}</span>
+            <span className="type">
+              {typeLabel(s.quizType)}
+              {s.title ? `——${s.title}` : ""}
+            </span>
             <span className="meta">
               <span className="time">{new Date(s.clientTs ?? s.createdAt).toLocaleString()}</span>
               <StatusMarker status={s.status} />

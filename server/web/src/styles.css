@@ -218,6 +218,35 @@ body {
 
 .session-view { flex: 1; overflow-y: auto; padding: 24px 32px 64px; }
 
+/* 答题区列：宽度由 inline maxWidth 驱动，两侧带拖拽手柄 */
+.column-wrap { display: flex; justify-content: center; align-items: stretch; }
+
+.col-handle {
+  flex: 0 0 14px;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+
+.col-handle::after {
+  content: "";
+  position: absolute;
+  top: 24px; bottom: 24px;
+  left: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.col-handle:hover::after { background: var(--royal-amethyst); }
+
+.elapsed {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ash);
+}
+
 /* 空状态：整体水平垂直居中 */
 .session-view.empty {
   display: flex;
@@ -227,7 +256,7 @@ body {
 
 .session-view.empty p { margin: 0; }
 
-.session-view .column { max-width: 760px; margin: 0 auto; }
+.session-view .column { width: 100%; max-width: 760px; }
 
 .session-view header {
   display: flex; align-items: center; gap: 12px;
@@ -245,7 +274,7 @@ body {
   color: var(--deep-iris);
 }
 
-/* 截图：白框卡片 + 分层轻投影，浮在薰衣草氛围上 */
+/* 截图：白框卡片 + 分层轻投影，答题区内居中 */
 .screenshot {
   display: block;
   max-width: 720px; width: 100%;
@@ -253,12 +282,12 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: 8px;
-  margin: 0 0 24px;
+  margin: 0 auto 24px;
 }
 
-/* 解答卡片：白色表面 + 发丝描边 */
+/* 解答卡片：白色表面 + 发丝描边，宽度跟随答题区列 */
 .paper {
-  max-width: 68ch;
+  width: 100%;
   background: var(--canvas);
   border: 1px solid var(--mist);
   border-radius: var(--radius);
@@ -289,9 +318,9 @@ body {
   color: var(--charcoal);
 }
 
-/* 代码块：Deep Iris 深紫底，紫调暮光高亮 */
+/* 代码块：浅紫底，紫调暮光高亮 */
 pre {
-  background: var(--deep-iris);
+  background: #3d2b5e;
   border-radius: var(--radius);
   padding: 16px 18px;
   overflow-x: auto;
@@ -493,6 +522,7 @@ button:focus-visible {
   }
 
   .session-view { padding: 18px 16px 48px; }
+  .col-handle { display: none; }
   .config { padding: 18px 16px 48px; }
   .paper { padding: 18px 18px; }
   .session-view h1 { font-size: 24px; }
