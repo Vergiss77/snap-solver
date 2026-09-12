@@ -1,5 +1,5 @@
 import type { ProviderConfig, QuizResult } from "@snap-solver/shared";
-import { ANALYSIS_PROMPT, parseQuizResult } from "./prompt.ts";
+import { parseQuizResult } from "./prompt.ts";
 
 export class ProviderError extends Error {
   readonly status?: number;
@@ -68,7 +68,7 @@ export async function testProvider(cfg: ProbeConfig & { model: string }): Promis
 }
 
 /** OpenAI-compatible path: POST {baseUrl}/chat/completions with base64 image_url. */
-export async function analyzeOpenAI(imagePng: Buffer, cfg: ProviderConfig): Promise<{ result: QuizResult; raw: string }> {
+export async function analyzeOpenAI(imagePng: Buffer, cfg: ProviderConfig, prompt: string): Promise<{ result: QuizResult; raw: string }> {
   const data = (await postJson(
     `${cfg.baseUrl.replace(/\/+$/, "")}/chat/completions`,
     { Authorization: `Bearer ${cfg.apiKey}` },
@@ -78,7 +78,7 @@ export async function analyzeOpenAI(imagePng: Buffer, cfg: ProviderConfig): Prom
         {
           role: "user",
           content: [
-            { type: "text", text: ANALYSIS_PROMPT },
+            { type: "text", text: prompt },
             { type: "image_url", image_url: { url: `data:image/png;base64,${imagePng.toString("base64")}` } },
           ],
         },
@@ -93,7 +93,7 @@ export async function analyzeOpenAI(imagePng: Buffer, cfg: ProviderConfig): Prom
 }
 
 /** Anthropic path: POST {baseUrl}/messages with base64 image block. */
-export async function analyzeAnthropic(imagePng: Buffer, cfg: ProviderConfig): Promise<{ result: QuizResult; raw: string }> {
+export async function analyzeAnthropic(imagePng: Buffer, cfg: ProviderConfig, prompt: string): Promise<{ result: QuizResult; raw: string }> {
   const data = (await postJson(
     `${cfg.baseUrl.replace(/\/+$/, "")}/messages`,
     { "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
@@ -105,7 +105,7 @@ export async function analyzeAnthropic(imagePng: Buffer, cfg: ProviderConfig): P
           role: "user",
           content: [
             { type: "image", source: { type: "base64", media_type: "image/png", data: imagePng.toString("base64") } },
-            { type: "text", text: ANALYSIS_PROMPT },
+            { type: "text", text: prompt },
           ],
         },
       ],

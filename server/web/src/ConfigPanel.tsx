@@ -13,10 +13,46 @@ interface ProviderForm {
 
 const EMPTY_FORM: ProviderForm = { name: "", protocol: "openai", baseUrl: "", apiKey: "", model: "" };
 
+interface Preset {
+  key: string;
+  label: string;
+  name: string;
+  protocol: ProviderProtocol;
+  baseUrl: string;
+  model: string;
+}
+
+const PRESETS: Preset[] = [
+  { key: "kimi", label: "Kimi", name: "Kimi", protocol: "openai", baseUrl: "https://api.kimi.com/coding/v1", model: "kimi-for-coding" },
+  { key: "deepseek", label: "DeepSeek", name: "DeepSeek", protocol: "openai", baseUrl: "https://api.deepseek.com", model: "deepseek-chat" },
+  { key: "openai", label: "OpenAI", name: "OpenAI", protocol: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-4o" },
+  { key: "anthropic", label: "Anthropic", name: "Anthropic", protocol: "anthropic", baseUrl: "https://api.anthropic.com", model: "claude-opus-5" },
+  { key: "other", label: "其他", name: "", protocol: "openai", baseUrl: "", model: "" },
+];
+
+const CODE_LANGUAGES: Array<{ value: string; label: string }> = [
+  { value: "", label: "不指定" },
+  { value: "python", label: "Python" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "go", label: "Go" },
+  { value: "rust", label: "Rust" },
+];
+
+/** Best-effort match of an existing provider back to a preset (by baseUrl). */
+function presetKeyOf(p: ProviderForm): string {
+  const hit = PRESETS.find((x) => x.key !== "other" && x.baseUrl === p.baseUrl);
+  return hit?.key ?? "other";
+}
+
 export function ConfigPanel(props: { port: number }): React.JSX.Element {
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [preset, setPreset] = useState("kimi");
   const [maxConcurrency, setMaxConcurrency] = useState(5);
+  const [analysisPrompt, setAnalysisPrompt] = useState("");
+  const [codeLanguage, setCodeLanguage] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const [models, setModels] = useState<string[]>([]);
@@ -24,7 +60,22 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
 
   const reload = (): void => {
     void api.providers().then(setProviders);
-    void api.settings().then((s) => setMaxConcurrency(s.maxConcurrency));
+    void api.settings().then((s) => {
+      setMaxConcurrency(s.maxConcurrency);
+      setAnalysisPrompt(s.analysisPrompt);
+      setCodeLanguage(s.codeLanguage);
+    });
+  };
+
+  const applyPreset = (key: string): void => {
+    setPreset(key);
+    const p = PRESETS.find((x) => x.key === key);
+    if (!p) return;
+    setForm((f) =>
+      key === "other"
+        ? { ...f, name: "", protocol: "openai", baseUrl: "", model: "" }
+        : { ...f, name: p.name, protocol: p.protocol, baseUrl: p.baseUrl, model: p.model },
+    );
   };
 
   const loadModels = async (): Promise<void> => {
@@ -57,6 +108,7 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
     try {
       await api.saveProvider(form);
       setForm(EMPTY_FORM);
+      setPreset("kimi");
       setMessage("供应商已保存");
       reload();
     } catch (e) {
@@ -85,12 +137,65 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
           <button
             className="btn-primary"
             onClick={() => {
-              void api.saveSettings(maxConcurrency).then(() => setMessage("并发上限已生效"));
+              void api.saveSettings({ maxConcurrency }).then(() => setMessage("并发上限已生效"));
             }}
           >
             保存
           </button>
         </div>
+
+        <h3>分析提示词</h3>
+        <div className="provider-form">
+          <label>
+            提示词（预置为当前生效的全文，可修改）
+            <textarea
+              rows={14}
+              value={analysisPrompt}
+              onChange={(e) => setAnalysisPrompt(e.target.value)}
+            />
+          </label>
+          <p className="muted hint">可修改指令内容，请保留末尾的 JSON 输出结构约定，否则分析会解析失败。</p>
+          <div className="row">
+            <button
+              className="btn-primary"
+              onClick={() => {
+                void api.saveSettings({ analysisPrompt }).then(() => setMessage("提示词已保存，后续新题生效"));
+              }}
+            >
+              保存
+            </button>
+            <button
+              onClick={() => {
+                void api.saveSettings({ analysisPrompt: "" }).then((s) => {
+                  setAnalysisPrompt(s.analysisPrompt);
+                  setMessage("已恢复为内置默认提示词");
+                });
+              }}
+            >
+              恢复默认
+            </button>
+          </div>
+        </div>
+
+        <h3>编程语言</h3>
+        <div className="row">
+          <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)}>
+            {CODE_LANGUAGES.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              void api.saveSettings({ codeLanguage }).then(() => setMessage("编程语言已生效"));
+            }}
+          >
+            保存
+          </button>
+        </div>
+        <p className="muted hint">配置后，编程题的代码实现将使用该语言。</p>
 
         <h3>LLM 供应商</h3>
         <ul className="providers">
@@ -115,7 +220,11 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
                 </span>
               )}
               <button
-                onClick={() => setForm({ id: p.id, name: p.name, protocol: p.protocol, baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model })}
+                onClick={() => {
+                  const f = { id: p.id, name: p.name, protocol: p.protocol, baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model };
+                  setForm(f);
+                  setPreset(presetKeyOf(f));
+                }}
               >
                 编辑
               </button>
@@ -133,6 +242,16 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
 
         <h3>{form.id ? "编辑供应商" : "新增供应商"}</h3>
         <div className="provider-form">
+          <label>
+            服务商预设
+            <select value={preset} onChange={(e) => applyPreset(e.target.value)}>
+              {PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             名称
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="如 Kimi Code" />

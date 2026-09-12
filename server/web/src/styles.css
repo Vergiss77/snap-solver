@@ -401,9 +401,22 @@ input, select {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+textarea {
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  color: var(--charcoal);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
 input::placeholder { color: var(--ash); }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--royal-amethyst);
   box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.18);
@@ -487,6 +500,8 @@ button:focus-visible {
 }
 
 .notice { color: var(--ok); font-size: 14px; }
+
+.hint { font-size: 12px; margin: 0; }
 
 /* ---------- 响应式：窄屏抽屉 ---------- */
 

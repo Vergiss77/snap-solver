@@ -6,6 +6,13 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface ServerSettings {
+  maxConcurrency: number;
+  /** Effective analysis prompt (custom or built-in default full text). */
+  analysisPrompt: string;
+  codeLanguage: string;
+}
+
 export const api = {
   records: () => req<SessionSummary[]>("/api/records"),
   recordDetail: (id: string) => req<RecordDetail>(`/api/records/${id}`),
@@ -18,12 +25,12 @@ export const api = {
     }),
   deleteProvider: (id: string) => req<{ ok: true }>(`/api/providers/${id}`, { method: "DELETE" }),
   activateProvider: (id: string) => req<{ ok: true }>(`/api/providers/${id}/activate`, { method: "POST" }),
-  settings: () => req<{ maxConcurrency: number }>("/api/settings"),
-  saveSettings: (maxConcurrency: number) =>
-    req<{ maxConcurrency: number }>("/api/settings", {
+  settings: () => req<ServerSettings>("/api/settings"),
+  saveSettings: (patch: Partial<ServerSettings>) =>
+    req<ServerSettings>("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ maxConcurrency }),
+      body: JSON.stringify(patch),
     }),
   listModels: (p: { protocol: string; baseUrl: string; apiKey: string }) =>
     req<{ models: string[] }>("/api/providers/models", {

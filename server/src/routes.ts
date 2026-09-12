@@ -5,7 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { ProviderConfig, SessionEvent } from "@snap-solver/shared";
 import type { Store } from "./db.ts";
 import type { AnalysisScheduler } from "./scheduler.ts";
-import { MAX_CONCURRENCY_KEY } from "./scheduler.ts";
+import { MAX_CONCURRENCY_KEY, ANALYSIS_PROMPT_KEY, CODE_LANGUAGE_KEY } from "./scheduler.ts";
 import { listModels, testProvider } from "./llm/index.ts";
 
 
@@ -142,17 +142,43 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
     }
   });
 
-  app.get("/api/settings", () => ({ maxConcurrency: scheduler.maxConcurrency }));
+  app.get("/api/settings", () => ({
+    maxConcurrency: scheduler.maxConcurrency,
+    // Effective prompt (custom or built-in default) so the editor shows what will actually be sent.
+    analysisPrompt: scheduler.analysisPrompt,
+    codeLanguage: scheduler.codeLanguage,
+  }));
+
+  const ALLOWED_CODE_LANGUAGES = new Set(["", "python", "java", "cpp", "javascript", "go", "rust"]);
 
   app.put("/api/settings", async (req, reply) => {
-    const body = req.body as { maxConcurrency?: unknown };
-    const n = Number(body.maxConcurrency);
-    if (!Number.isInteger(n) || n < 1 || n > 32) {
-      return reply.code(400).send({ error: "maxConcurrency must be an integer in [1, 32]" });
+    const body = req.body as { maxConcurrency?: unknown; analysisPrompt?: unknown; codeLanguage?: unknown };
+    if (body.maxConcurrency !== undefined) {
+      const n = Number(body.maxConcurrency);
+      if (!Number.isInteger(n) || n < 1 || n > 32) {
+        return reply.code(400).send({ error: "maxConcurrency must be an integer in [1, 32]" });
+      }
+      store.setSetting(MAX_CONCURRENCY_KEY, String(n));
+      scheduler.tick(); // raised cap takes effect immediately
     }
-    store.setSetting(MAX_CONCURRENCY_KEY, String(n));
-    scheduler.tick(); // raised cap takes effect immediately
-    return { maxConcurrency: n };
+    if (body.analysisPrompt !== undefined) {
+      if (typeof body.analysisPrompt !== "string") {
+        return reply.code(400).send({ error: "analysisPrompt must be a string" });
+      }
+      // Empty string = restore the built-in default prompt.
+      store.setSetting(ANALYSIS_PROMPT_KEY, body.analysisPrompt);
+    }
+    if (body.codeLanguage !== undefined) {
+      if (typeof body.codeLanguage !== "string" || !ALLOWED_CODE_LANGUAGES.has(body.codeLanguage)) {
+        return reply.code(400).send({ error: "codeLanguage must be one of: python, java, cpp, javascript, go, rust (or empty)" });
+      }
+      store.setSetting(CODE_LANGUAGE_KEY, body.codeLanguage);
+    }
+    return {
+      maxConcurrency: scheduler.maxConcurrency,
+      analysisPrompt: scheduler.analysisPrompt,
+      codeLanguage: scheduler.codeLanguage,
+    };
   });
 }
 

@@ -2,9 +2,12 @@ import fs from "node:fs";
 import type { QuizResult, SessionEvent, SessionSummary } from "@snap-solver/shared";
 import type { Store } from "./db.ts";
 import { analyzeAnthropic, analyzeOpenAI } from "./llm/index.ts";
+import { ANALYSIS_PROMPT } from "./llm/prompt.ts";
 
 export const DEFAULT_MAX_CONCURRENCY = 5;
 export const MAX_CONCURRENCY_KEY = "maxConcurrency";
+export const ANALYSIS_PROMPT_KEY = "analysisPrompt";
+export const CODE_LANGUAGE_KEY = "codeLanguage";
 
 type Listener = (event: SessionEvent) => void;
 
@@ -27,6 +30,24 @@ export class AnalysisScheduler {
     const v = this.store.getSetting(MAX_CONCURRENCY_KEY);
     const n = v === null ? NaN : Number(v);
     return Number.isInteger(n) && n >= 1 ? n : DEFAULT_MAX_CONCURRENCY;
+  }
+
+  /** Effective analysis prompt: custom setting, falling back to the built-in default. */
+  get analysisPrompt(): string {
+    const v = this.store.getSetting(ANALYSIS_PROMPT_KEY);
+    return v !== null && v.trim().length > 0 ? v : ANALYSIS_PROMPT;
+  }
+
+  /** Configured programming language for coding questions; empty = unspecified. */
+  get codeLanguage(): string {
+    return this.store.getSetting(CODE_LANGUAGE_KEY)?.trim() ?? "";
+  }
+
+  /** Final prompt sent to the LLM: user prompt + appended language directive (never inlined as a placeholder). */
+  buildPrompt(): string {
+    const lang = this.codeLanguage;
+    if (!lang) return this.analysisPrompt;
+    return `${this.analysisPrompt}\n\n附加要求：若截图为编程题，代码实现必须使用 ${lang}。`;
   }
 
   onEvent(listener: Listener): void {
@@ -59,10 +80,11 @@ export class AnalysisScheduler {
       const imagePath = this.store.imagePathOf(id);
       if (!imagePath) throw new Error(`Image missing for session ${id}`);
       const image = fs.readFileSync(imagePath);
+      const prompt = this.buildPrompt();
       const { result, raw } =
         provider.protocol === "anthropic"
-          ? await analyzeAnthropic(image, provider)
-          : await analyzeOpenAI(image, provider);
+          ? await analyzeAnthropic(image, provider, prompt)
+          : await analyzeOpenAI(image, provider, prompt);
       this.store.setSessionStatus(id, "done", { rawResponse: raw });
       this.archive(id, result);
       this.emit("session.done", this.store.getSession(id)!);
