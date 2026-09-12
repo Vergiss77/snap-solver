@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  client:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: "" # runner 默认目标
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build client
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: client
+          args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "snap-solver ${{ github.ref_name }}"
+          releaseDraft: false
+          prerelease: false
+
+  server-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web dashboard
+        run: npm run build -w @snap-solver/web
+
+      - name: Pack server bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          STAGE="snap-solver-server-${VERSION}"
+          mkdir -p "${STAGE}/server" "${STAGE}/shared"
+          cp -r server/src server/package.json "${STAGE}/server/"
+          mkdir -p "${STAGE}/server/web"
+          cp -r server/web/dist "${STAGE}/server/web/dist"
+          cp -r shared/src shared/package.json "${STAGE}/shared/"
+          cp README.md "${STAGE}/"
+          # staged 目录不是 workspace：shared 依赖改为 file: 相对路径（npm 建符号链接，
+          # realpath 不在 node_modules 下，Node 24 类型擦除照常生效，与本机 workspace 行为一致）
+          sed -i 's|"@snap-solver/shared": "\*"|"@snap-solver/shared": "file:../shared"|' "${STAGE}/server/package.json"
+          tar -czf "${STAGE}.tar.gz" "${STAGE}"
+          echo "BUNDLE=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Ensure Release exists
+        run: |
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
+            gh release create "${GITHUB_REF_NAME}" --title "snap-solver ${GITHUB_REF_NAME}" --notes "" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Release
+        run: gh release upload "${GITHUB_REF_NAME}" "${BUNDLE}" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -49,6 +49,33 @@ npm run tauri -w @snap-solver/client -- build
 #       client/src-tauri/target/release/bundle/  (NSIS/MSI 安装包)
 ```
 
+## 下载安装（免构建）
+
+推送 `v*` tag 会触发 GitHub Actions 自动构建并发布到 [Releases](../../releases) 页面，直接下载对应产物即可，无需 Rust / 前端构建工具链。
+
+**客户端**（按平台选一）：
+
+| 平台 | 产物 |
+|---|---|
+| Windows 10/11 | `.exe` NSIS 安装包 |
+| macOS (Apple Silicon) | `aarch64` 的 `.dmg` |
+| macOS (Intel) | `x86_64` 的 `.dmg` |
+
+安装包未做代码签名，首次运行需手动放行：
+
+- **Windows**：SmartScreen 弹窗 →"更多信息"→"仍要运行"
+- **macOS**：右键 app →"打开"（或在 系统设置 → 隐私与安全性 中点"仍要打开"）；随后按需授予"屏幕录制"与"输入监控"权限
+
+**服务端**：下载 `snap-solver-server-<版本>.tar.gz`，解压后：
+
+```bash
+cd server
+npm install --omit=dev
+node src/index.ts        # 监听 0.0.0.0:17890, 需 Node.js ≥ 24
+```
+
+包内已含预构建的网页看板（`server/web/dist`），无需自行构建前端。
+
 ## 使用
 
 1. **配置供应商**：浏览器打开 `http://<服务端IP>:17890` → 右上角"配置" → 新增供应商。Kimi Code 订阅示例：
@@ -82,6 +109,17 @@ server/web/  React 网页看板 (Vite 构建, 由服务端托管)
 client/      Tauri 2 客户端: Rust 薄壳 (热键/截图/托盘/发送) + React 设置窗口
 openspec/    OpenSpec 变更与规格
 ```
+
+## 发版流程
+
+```bash
+# 1. 同步版本号: client/src-tauri/tauri.conf.json 与 client/package.json 的 version
+# 2. 提交后打 tag 并推送
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+推送 `v*` tag 后，`.github/workflows/release.yml` 自动构建三平台客户端安装包与服务端 tar 包并发布到 Releases。构建失败时修复后删除远端 tag（`git push origin :v0.2.0`）重打即可。
 
 ## 已知说明
 
