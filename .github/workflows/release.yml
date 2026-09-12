@@ -32,6 +32,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Add Rust target
+        if: matrix.target != ''
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build client
         uses: tauri-apps/tauri-action@v0
         env:
