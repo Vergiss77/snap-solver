@@ -54,9 +54,10 @@ export function App(): React.JSX.Element {
 
       <h2>截图快捷键</h2>
       <HotkeyRecorder value={hotkey} onChange={setHotkey} onInvalid={setNotice} />
-      <p className={state.hotkeyActive ? "ok" : "warn"}>
+      <span className={state.hotkeyActive ? "status-mark ok" : "status-mark warn"}>
+        <span className="dot" />
         {state.hotkeyActive ? "全局热键运行中" : "热键未生效——保存后重试，或更换组合"}
-      </p>
+      </span>
 
       <h2>服务端</h2>
       <div className="row">
@@ -77,16 +78,25 @@ export function App(): React.JSX.Element {
         <button disabled={testing} onClick={() => void test()}>
           {testing ? "测试中…" : "测试连接"}
         </button>
-        <button onClick={() => void save()}>保存配置</button>
+        <button className="btn-primary" onClick={() => void save()}>保存配置</button>
       </div>
 
       <h2>系统权限</h2>
       {state.platform === "macos" ? (
-        <p className={state.screenPermission ? "ok" : "warn"}>
-          屏幕录制权限：{state.screenPermission ? "已授予" : "未授予——请在 系统设置 → 隐私与安全性 → 屏幕录制 中允许本应用，并重启客户端"}
-        </p>
+        <>
+          <span className={state.screenPermission ? "status-mark ok" : "status-mark warn"}>
+            <span className="dot" />
+            屏幕录制权限：{state.screenPermission ? "已授予" : "未授予"}
+          </span>
+          {!state.screenPermission && (
+            <p className="muted">请在 系统设置 → 隐私与安全性 → 屏幕录制 中允许本应用，并重启客户端</p>
+          )}
+        </>
       ) : (
-        <p className="ok">Windows 无需额外权限</p>
+        <span className="status-mark ok">
+          <span className="dot" />
+          Windows 无需额外权限
+        </span>
       )}
     </div>
   );

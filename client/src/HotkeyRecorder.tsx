@@ -11,6 +11,11 @@ const RESERVED_CHORDS: Record<string, true> = {
   "commandorcontrol+alt+delete": true,
 };
 
+/** Display-only: accelerator "CommandOrControl" reads better as "Command/Control". */
+function displayChord(accelerator: string): string {
+  return accelerator.replace(/CommandOrControl/g, "Command/Control");
+}
+
 /**
  * "Press to record" hotkey input. Captures a keydown chord and renders it as a
  * Tauri accelerator string (e.g. "CommandOrControl+Shift+S"). Bare letter keys
@@ -51,7 +56,7 @@ export function HotkeyRecorder(props: {
     <input
       readOnly
       className={recording ? "hotkey recording" : "hotkey"}
-      value={recording ? "请按下快捷键组合…" : props.value}
+      value={recording ? "请按下快捷键组合…" : displayChord(props.value)}
       onFocus={() => {
         setRecording(true);
         void setHotkeySuspended(true);

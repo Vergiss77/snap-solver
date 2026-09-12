@@ -304,14 +304,17 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // macOS: background-agent form — no dock icon; the menu-bar tray is the entry point.
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let config = load_config(app.handle());
             *app.state::<AppState>().config.lock() = config.clone();
 
             let show = MenuItem::with_id(app, "show", "打开设置", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+            let tray = TrayIconBuilder::new()
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => {
@@ -322,8 +325,15 @@ pub fn run() {
                     }
                     "quit" => app.exit(0),
                     _ => {}
-                })
-                .build(app)?;
+                });
+            // macOS: monochrome template icon — the system recolors it with the menu-bar theme.
+            #[cfg(target_os = "macos")]
+            let tray = tray
+                .icon(tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template-22.png"))?)
+                .icon_as_template(true);
+            #[cfg(not(target_os = "macos"))]
+            let tray = tray.icon(app.default_window_icon().unwrap().clone());
+            tray.build(app)?;
 
             match try_register(app.handle(), &config.hotkey) {
                 Ok(sc) => *app.state::<AppState>().registered.lock() = Some(sc),

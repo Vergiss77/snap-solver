@@ -1,27 +1,193 @@
-:root {
-  color-scheme: dark;
-  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: #0f1115; color: #e6e8ee; }
+/* Snap Solver 客户端设置窗口 — 与服务端看板同源的浅色薰衣草风格
+   白底 + 紫罗兰墨色：Deep Iris 标题/主按钮，Royal Amethyst 焦点，
+   8px 圆角 + 1440px 胶囊徽记，蓝调轻投影。tokens 拷贝自 server/web。 */
 
-.settings { padding: 20px 24px; display: flex; flex-direction: column; gap: 6px; }
-h1 { font-size: 18px; margin: 0 0 8px; }
-h2 { font-size: 14px; margin: 16px 0 6px; color: #aab1c2; }
-.muted { color: #8b93a5; }
-.ok { color: #4ade80; font-size: 13px; margin: 4px 0; }
-.warn { color: #fbbf24; font-size: 13px; margin: 4px 0; }
-.notice { color: #7ee2a8; font-size: 13px; }
+:root {
+  color-scheme: light;
+
+  /* 紫罗兰色板 */
+  --deep-iris: #26114a;
+  --plum-velvet: #312749;
+  --royal-amethyst: #3e0079;
+  --mist-violet: #edecff;
+  --lavender-glow: #b99aff;
+
+  /* 中性色板 */
+  --canvas: #ffffff;
+  --paper: #f6f7fa;
+  --mist: #e6e2e3;
+  --smoke: #c1c7cf;
+  --ash: #9491a1;
+  --slate: #615e6e;
+  --charcoal: #333333;
+
+  /* 状态语义色 */
+  --ok: #2e7d4f;
+  --ok-bg: #e4f3ea;
+  --err: #b3261e;
+  --err-bg: #fbeae8;
+  --warn: #8a6d1a;
+  --warn-bg: #fbf3dd;
+
+  /* 字体 */
+  --font-ui: "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* 形状 */
+  --radius: 8px;
+  --radius-pill: 1440px;
+
+  /* 蓝调轻投影 */
+  --shadow-sm: rgba(18, 55, 105, 0.08) 0px 2px 4px 0px,
+    rgba(18, 55, 105, 0.04) 0px 1px 1px 0px,
+    rgba(18, 55, 105, 0.08) 0px 0px 0px 1px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--charcoal);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- 布局：520px 单列表单 ---------- */
+
+.settings {
+  margin: 18px 14px 24px;
+  padding: 26px 28px 30px;
+  background: var(--canvas);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--deep-iris);
+}
+
+h2 {
+  margin: 20px 0 8px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--slate);
+  text-transform: uppercase;
+}
+
+/* ---------- 提示与状态 ---------- */
+
+.muted { color: var(--ash); }
+.notice {
+  margin: 4px 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--mist-violet);
+  color: var(--plum-velvet);
+  font-size: 13px;
+}
+
+/* 权限/热键状态：胶囊徽记 */
+.status-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--paper);
+  color: var(--slate);
+  margin: 2px 0;
+}
+
+.status-mark .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }
+.status-mark.ok { background: var(--ok-bg); color: var(--ok); }
+.status-mark.warn { background: var(--warn-bg); color: var(--warn); }
+
+/* ---------- 表单 ---------- */
+
 .row { display: flex; gap: 10px; align-items: flex-end; }
-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #aab1c2; flex: 1; }
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  font-size: 13px;
+  color: var(--slate);
+}
+
 input {
-  background: #1a1e27; border: 1px solid #2c3342; color: inherit;
-  border-radius: 6px; padding: 8px 10px; font-size: 14px; width: 100%;
+  background: var(--canvas);
+  border: 1px solid var(--mist);
+  color: var(--charcoal);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: var(--font-ui);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.hotkey.recording { border-color: #4f7cff; }
+
+input::placeholder { color: var(--ash); }
+
+input:focus {
+  outline: none;
+  border-color: var(--royal-amethyst);
+  box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.18);
+}
+
+/* 热键录入框：等宽字 + 录制态强调 */
+input.hotkey { font-family: var(--font-mono); font-size: 13px; cursor: pointer; }
+input.hotkey.recording {
+  border-color: var(--royal-amethyst);
+  box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.18);
+  color: var(--royal-amethyst);
+}
+
+/* ---------- 按钮分级 ---------- */
+
 button {
-  background: #2c3347; border: 1px solid #3a4358; color: inherit;
-  border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 14px;
+  background: transparent;
+  border: 1px solid var(--deep-iris);
+  color: var(--deep-iris);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-button:hover { background: #36405a; }
-button:disabled { opacity: 0.5; cursor: default; }
+
+button:hover { background: var(--mist-violet); }
+button:disabled { opacity: 0.55; cursor: default; }
+button:disabled:hover { background: transparent; }
+
+button.btn-primary {
+  background: var(--deep-iris);
+  color: var(--canvas);
+  border-color: var(--deep-iris);
+}
+
+button.btn-primary:hover { background: var(--plum-velvet); }
+button.btn-primary:disabled:hover { background: var(--deep-iris); }
+
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(62, 0, 121, 0.28);
+}
