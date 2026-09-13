@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { RecordDetail, SessionEvent, SessionSummary } from "@snap-solver/shared";
 import { api } from "./api.ts";
+import { exportMany } from "./export.ts";
 import { useSessionEvents } from "./useEvents.ts";
 import { HistoryList } from "./HistoryList.tsx";
 import { SessionView } from "./SessionView.tsx";
@@ -82,6 +83,25 @@ export function App(): React.JSX.Element {
     });
   };
 
+  const exportChecked = (): void => {
+    // List order (newest first), capped-concurrency detail fetches.
+    const ids = sessions.filter((s) => checkedIds.has(s.id)).map((s) => s.id);
+    if (ids.length === 0) return;
+    void (async () => {
+      const details: RecordDetail[] = [];
+      let skipped = 0;
+      const POOL = 8;
+      for (let i = 0; i < ids.length; i += POOL) {
+        const results = await Promise.allSettled(ids.slice(i, i + POOL).map((id) => api.recordDetail(id)));
+        for (const r of results) {
+          if (r.status === "fulfilled") details.push(r.value);
+          else skipped += 1;
+        }
+      }
+      if (details.length > 0) exportMany(details, skipped);
+    })();
+  };
+
   return (
     <div className="app">
       <nav className="topbar">
@@ -144,6 +164,7 @@ export function App(): React.JSX.Element {
               setCheckedIds(checked ? new Set(sessions.map((s) => s.id)) : new Set())
             }
             onDeleteChecked={deleteChecked}
+            onExportChecked={exportChecked}
           />
           {viewingSummary ? (
             <SessionView

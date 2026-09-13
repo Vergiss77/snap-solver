@@ -23,6 +23,8 @@ export interface QuizResult {
   type: QuizType;
   /** Short gist title (<=15 chars) summarizing the question, e.g. "求二叉树最大深度". */
   title?: string;
+  /** Transcription of the question text from the screenshot. */
+  question?: string;
   /** The answer itself (selected option, filled blanks, short answer, or summary for programming). */
   answer: string;
   /** Step-by-step reasoning / solution walkthrough. */
@@ -58,6 +60,8 @@ export interface SessionSummary {
 }
 
 export interface RecordDetail extends SessionSummary {
+  /** Question transcription from the analysis; null for old records or unparseable responses. */
+  question: string | null;
   answer: string | null;
   reasoning: string | null;
   code: string | null;

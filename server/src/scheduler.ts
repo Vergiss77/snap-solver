@@ -110,6 +110,7 @@ export class AnalysisScheduler {
       sessionId: id,
       quizType: result.type,
       title: result.title ?? null,
+      question: result.question ?? null,
       answer: result.answer,
       reasoning: result.reasoning,
       code: result.code ?? null,

@@ -57,6 +57,12 @@ export class Store {
     } catch {
       /* column already exists */
     }
+    // Migration: records.question (transcription) — same idempotent pattern.
+    try {
+      this.db.exec("ALTER TABLE records ADD COLUMN question TEXT");
+    } catch {
+      /* column already exists */
+    }
   }
 
   // ---- sessions ----
@@ -152,6 +158,7 @@ export class Store {
     sessionId: string;
     quizType: QuizType;
     title: string | null;
+    question: string | null;
     answer: string;
     reasoning: string;
     code: string | null;
@@ -159,9 +166,9 @@ export class Store {
   }): void {
     this.db
       .prepare(
-        "INSERT OR REPLACE INTO records (session_id, quiz_type, title, answer, reasoning, code, code_language) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO records (session_id, quiz_type, title, question, answer, reasoning, code, code_language) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(rec.sessionId, rec.quizType, rec.title, rec.answer, rec.reasoning, rec.code, rec.codeLanguage);
+      .run(rec.sessionId, rec.quizType, rec.title, rec.question, rec.answer, rec.reasoning, rec.code, rec.codeLanguage);
   }
 
   listRecords(): SessionSummary[] {
@@ -179,13 +186,14 @@ export class Store {
     const row = this.db
       .prepare(
         `SELECT s.id, s.status, s.client_ts, s.created_at, s.finished_at, s.error, s.raw_response,
-                r.quiz_type, r.title, r.answer, r.reasoning, r.code, r.code_language
+                r.quiz_type, r.title, r.question, r.answer, r.reasoning, r.code, r.code_language
          FROM sessions s LEFT JOIN records r ON r.session_id = s.id WHERE s.id = ?`,
       )
       .get(id) as Record<string, unknown> | undefined;
     if (!row) return null;
     return {
       ...toSummary(row),
+      question: (row.question as string) ?? null,
       answer: (row.answer as string) ?? null,
       reasoning: (row.reasoning as string) ?? null,
       code: (row.code as string) ?? null,

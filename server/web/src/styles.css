@@ -336,7 +336,7 @@ button.btn-mini {
 
 .section-title:first-child { margin-top: 0; }
 
-.answer, .reasoning {
+.answer, .reasoning, .question {
   display: block;
   white-space: pre-wrap;
   margin: 0 0 4px;
@@ -344,6 +344,20 @@ button.btn-mini {
   line-height: 1.6;
   color: var(--charcoal);
 }
+
+/* 题目描述（识别原文）：次要色，与解答正文区分 */
+.question { color: var(--slate); }
+
+.session-view header .btn-export {
+  margin-left: auto;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-pill);
+  border-color: var(--mist);
+  color: var(--slate);
+}
+
+.session-view header .btn-export:hover { color: var(--royal-amethyst); border-color: var(--royal-amethyst); background: var(--mist-violet); }
 
 /* 代码块：浅紫底，紫调暮光高亮 */
 pre {

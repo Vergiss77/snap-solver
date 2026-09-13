@@ -38,6 +38,7 @@ export function HistoryList(props: {
   onToggleCheck: (id: string) => void;
   onCheckAll: (checked: boolean) => void;
   onDeleteChecked: () => void;
+  onExportChecked: () => void;
 }): React.JSX.Element {
   const allChecked = props.sessions.length > 0 && props.checkedIds.size === props.sessions.length;
   return (
@@ -48,6 +49,13 @@ export function HistoryList(props: {
           {allChecked ? "全不选" : "全选"}
         </button>
         <span className="spacer" />
+        <button
+          className="btn-mini"
+          disabled={props.checkedIds.size === 0}
+          onClick={props.onExportChecked}
+        >
+          导出 ({props.checkedIds.size})
+        </button>
         <button
           className="btn-mini btn-danger"
           disabled={props.checkedIds.size === 0}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import hljs from "highlight.js";
 import type { RecordDetail, SessionSummary } from "@snap-solver/shared";
 import { typeLabel, StatusMarker } from "./HistoryList.tsx";
+import { exportDetail } from "./export.ts";
 
 const COLUMN_MIN = 600;
 const COLUMN_MAX = 1280;
@@ -89,6 +90,11 @@ export function SessionView(props: {
             <h1>{sessionTitle(session)}</h1>
             <StatusMarker status={session.status} />
             {elapsed && <span className="elapsed">{elapsed}</span>}
+            {detail && session.status === "done" && (
+              <button className="btn-export" onClick={() => exportDetail(detail)}>
+                导出 Markdown
+              </button>
+            )}
           </header>
           <img className="screenshot reveal" src={`/api/images/${session.id}`} alt="题目截图" />
           {session.status === "pending" && <p className="muted">排队等待分析…</p>}
@@ -100,6 +106,12 @@ export function SessionView(props: {
                 <p className="muted">截图内容不是题目。</p>
               ) : (
                 <div className="paper">
+                  {detail.question && (
+                    <>
+                      <h2 className="section-title reveal">题目</h2>
+                      <p className="question reveal">{detail.question}</p>
+                    </>
+                  )}
                   <h2 className="section-title reveal">答案</h2>
                   <p className="answer reveal d1">{detail.answer}</p>
                   <h2 className="section-title reveal d1">解题思路</h2>
