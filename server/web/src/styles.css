@@ -542,6 +542,23 @@ button:focus-visible {
 
 .notice { color: var(--ok); font-size: 14px; }
 
+/* 显示偏好：即时生效的选框组 */
+.prefs { display: flex; gap: 18px; flex-wrap: wrap; }
+
+.pref {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px;
+  color: var(--plum-velvet);
+  cursor: pointer;
+}
+
+.pref input[type="checkbox"] {
+  width: 15px; height: 15px;
+  margin: 0;
+  accent-color: var(--royal-amethyst);
+  cursor: pointer;
+}
+
 .hint { font-size: 12px; margin: 0; }
 
 /* ---------- 响应式：窄屏抽屉 ---------- */

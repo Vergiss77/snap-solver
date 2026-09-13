@@ -3,6 +3,7 @@ import hljs from "highlight.js";
 import type { RecordDetail, SessionSummary } from "@snap-solver/shared";
 import { typeLabel, StatusMarker } from "./HistoryList.tsx";
 import { exportDetail } from "./export.ts";
+import { useDisplayPrefs } from "./prefs.ts";
 
 const COLUMN_MIN = 600;
 const COLUMN_MAX = 1280;
@@ -79,6 +80,7 @@ export function SessionView(props: {
 }): React.JSX.Element {
   const { session, detail } = props;
   const [columnWidth, startDrag] = useColumnWidth();
+  const prefs = useDisplayPrefs();
   const elapsed =
     session.status === "done" && session.finishedAt ? elapsedLabel(session.createdAt, session.finishedAt) : null;
   return (
@@ -96,7 +98,7 @@ export function SessionView(props: {
               </button>
             )}
           </header>
-          <img className="screenshot reveal" src={`/api/images/${session.id}`} alt="题目截图" />
+          {prefs.showImage && <img className="screenshot reveal" src={`/api/images/${session.id}`} alt="题目截图" />}
           {session.status === "pending" && <p className="muted">排队等待分析…</p>}
           {session.status === "analyzing" && <p className="muted">分析中，请稍候…</p>}
           {session.status === "failed" && <p className="error">分析失败：{session.error}</p>}
@@ -106,7 +108,7 @@ export function SessionView(props: {
                 <p className="muted">截图内容不是题目。</p>
               ) : (
                 <div className="paper">
-                  {detail.question && (
+                  {prefs.showQuestion && detail.question && (
                     <>
                       <h2 className="section-title reveal">题目</h2>
                       <p className="question reveal">{detail.question}</p>

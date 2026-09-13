@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ProviderConfig, ProviderProtocol } from "@snap-solver/shared";
 import { api } from "./api.ts";
+import { setDisplayPrefs, useDisplayPrefs } from "./prefs.ts";
 
 interface ProviderForm {
   id?: string;
@@ -54,6 +55,7 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
   const [analysisPrompt, setAnalysisPrompt] = useState("");
   const [codeLanguage, setCodeLanguage] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const displayPrefs = useDisplayPrefs();
 
   const [models, setModels] = useState<string[]>([]);
   const [probing, setProbing] = useState(false);
@@ -124,6 +126,27 @@ export function ConfigPanel(props: { port: number }): React.JSX.Element {
 
         <h3>监听端口</h3>
         <p className="muted">当前端口：{props.port}（修改端口需编辑启动参数并重启服务端）</p>
+
+        <h3>显示偏好</h3>
+        <div className="prefs">
+          <label className="pref">
+            <input
+              type="checkbox"
+              checked={displayPrefs.showImage}
+              onChange={(e) => setDisplayPrefs({ showImage: e.target.checked })}
+            />
+            显示图片
+          </label>
+          <label className="pref">
+            <input
+              type="checkbox"
+              checked={displayPrefs.showQuestion}
+              onChange={(e) => setDisplayPrefs({ showQuestion: e.target.checked })}
+            />
+            显示题干
+          </label>
+        </div>
+        <p className="muted hint">控制答题区是否展示截图与题目描述，仅影响本浏览器的显示，不影响已保存的题目数据。</p>
 
         <h3>分析并发上限</h3>
         <div className="row">
