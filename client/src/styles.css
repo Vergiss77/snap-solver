@@ -159,6 +159,34 @@ input.hotkey.recording {
   color: var(--royal-amethyst);
 }
 
+/* 快捷键列表行 */
+.hotkey-row { display: flex; align-items: center; gap: 8px; }
+.hotkey-row input.hotkey { flex: 1; }
+.hotkey-row .status-mark { flex: none; margin: 0; }
+
+button.btn-icon {
+  flex: none;
+  width: 32px; height: 32px;
+  padding: 0;
+  border-color: var(--mist);
+  color: var(--ash);
+  font-size: 15px;
+  line-height: 1;
+}
+
+button.btn-icon:hover:not(:disabled) { color: var(--err); background: var(--err-bg); border-color: var(--err); }
+
+button.btn-add {
+  align-self: flex-start;
+  border-style: dashed;
+  border-color: var(--smoke);
+  color: var(--slate);
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.hint { font-size: 12px; margin: 2px 0; }
+
 /* ---------- 按钮分级 ---------- */
 
 button {

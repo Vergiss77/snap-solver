@@ -6,7 +6,7 @@ export function App(): React.JSX.Element {
   const [state, setState] = useState<ClientState | null>(null);
   const [host, setHost] = useState("");
   const [port, setPort] = useState(17890);
-  const [hotkey, setHotkey] = useState("");
+  const [hotkeys, setHotkeys] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -15,21 +15,27 @@ export function App(): React.JSX.Element {
       setState(s);
       setHost(s.config.serverHost);
       setPort(s.config.serverPort);
-      setHotkey(s.config.hotkey);
+      setHotkeys(s.config.hotkeys);
     });
   }, []);
 
   if (!state) return <p className="muted">加载中…</p>;
 
   const save = async (): Promise<void> => {
+    const list = [...new Set(hotkeys.map((h) => h.trim()).filter((h) => h.length > 0))];
+    if (list.length === 0) {
+      setNotice("至少保留一个快捷键");
+      return;
+    }
     try {
-      const next = await saveConfig({ serverHost: host, serverPort: port, hotkey });
+      const next = await saveConfig({ serverHost: host, serverPort: port, hotkeys: list });
       setState(next);
-      if (next.hotkeyError) {
-        setNotice(`已保存（服务端地址已更新），但快捷键未更换：${next.hotkeyError}，仍沿用原快捷键`);
-        setHotkey(next.config.hotkey);
+      setHotkeys(next.config.hotkeys);
+      const failed = next.hotkeys.filter((h) => !h.active);
+      if (failed.length > 0) {
+        setNotice(`已保存，但 ${failed.length} 个快捷键未生效：${failed.map((f) => f.error ?? f.hotkey).join("；")}`);
       } else {
-        setNotice(next.hotkeyActive ? "已保存，快捷键已生效" : "已保存，但快捷键未生效");
+        setNotice("已保存，快捷键已生效");
       }
     } catch (e) {
       setNotice(`保存失败：${String(e)}`);
@@ -53,11 +59,36 @@ export function App(): React.JSX.Element {
       {notice && <p className="notice">{notice}</p>}
 
       <h2>截图快捷键</h2>
-      <HotkeyRecorder value={hotkey} onChange={setHotkey} onInvalid={setNotice} />
-      <span className={state.hotkeyActive ? "status-mark ok" : "status-mark warn"}>
-        <span className="dot" />
-        {state.hotkeyActive ? "全局热键运行中" : "热键未生效——保存后重试，或更换组合"}
-      </span>
+      {hotkeys.map((h, i) => {
+        const st = state.hotkeys.find((x) => x.hotkey === h);
+        return (
+          <div className="hotkey-row" key={i}>
+            <HotkeyRecorder
+              value={h}
+              onChange={(v) => setHotkeys((prev) => prev.map((x, j) => (j === i ? v : x)))}
+              onInvalid={setNotice}
+            />
+            {st && (
+              <span className={st.active ? "status-mark ok" : "status-mark warn"} title={st.error ?? undefined}>
+                <span className="dot" />
+                {st.active ? "生效中" : "未生效"}
+              </span>
+            )}
+            <button
+              className="btn-icon"
+              title="删除此快捷键"
+              disabled={hotkeys.length <= 1}
+              onClick={() => setHotkeys((prev) => prev.filter((_, j) => j !== i))}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+      <button className="btn-add" onClick={() => setHotkeys((prev) => [...prev, ""])}>
+        + 添加快捷键
+      </button>
+      <p className="muted hint">不带修饰键的单键仅支持 F1–F12、PrintScreen、ScrollLock、Pause、Insert</p>
 
       <h2>服务端</h2>
       <div className="row">

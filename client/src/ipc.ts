@@ -3,13 +3,19 @@ import { invoke } from "@tauri-apps/api/core";
 export interface ClientConfig {
   serverHost: string;
   serverPort: number;
+  hotkeys: string[];
+}
+
+export interface HotkeyStatus {
   hotkey: string;
+  active: boolean;
+  error: string | null;
 }
 
 export interface ClientState {
   config: ClientConfig;
-  hotkeyError: string | null;
-  hotkeyActive: boolean;
+  /** Per-hotkey registration status, mirroring config.hotkeys. */
+  hotkeys: HotkeyStatus[];
   screenPermission: boolean;
   platform: string;
 }

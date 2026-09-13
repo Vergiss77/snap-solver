@@ -1,10 +1,6 @@
-# Client Settings Ui Specification
+# Delta: client-settings-ui
 
-## Purpose
-
-Tauri 客户端的设置窗口：以图形界面配置全局快捷键、服务端地址与端口，提供连接测试，并在托盘常驻运行；配置在重启后保持。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 快捷键配置
 

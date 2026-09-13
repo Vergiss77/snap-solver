@@ -1,10 +1,6 @@
-# Client Screenshot Capture Specification
+# Delta: client-screenshot-capture
 
-## Purpose
-
-Tauri 客户端的核心捕获能力：在用户按下可配置的全局快捷键时，对当前屏幕执行静默全屏截图（前台无任何窗口、闪烁或提示），并将截图通过局域网发送到配置的服务端；服务端不可达时静默丢弃。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 全局快捷键触发截图
 

@@ -9,12 +9,45 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
 // ---------- persisted client configuration ----------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientConfig {
     pub server_host: String,
     pub server_port: u16,
-    pub hotkey: String,
+    pub hotkeys: Vec<String>,
+}
+
+/// Accepts both the current `hotkeys: [...]` format and the legacy
+/// single `hotkey: "..."` field (migrated to a one-element list).
+impl<'de> Deserialize<'de> for ClientConfig {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Raw {
+            server_host: Option<String>,
+            server_port: Option<u16>,
+            hotkeys: Option<Vec<String>>,
+            // Legacy pre-0.3 format.
+            hotkey: Option<String>,
+        }
+        let raw = Raw::deserialize(d)?;
+        let defaults = ClientConfig::default();
+        let mut hotkeys = raw
+            .hotkeys
+            .or_else(|| raw.hotkey.map(|h| vec![h]))
+            .unwrap_or_else(|| defaults.hotkeys.clone());
+        if hotkeys.is_empty() {
+            hotkeys = defaults.hotkeys.clone();
+        }
+        Ok(ClientConfig {
+            server_host: raw.server_host.unwrap_or(defaults.server_host),
+            server_port: raw.server_port.unwrap_or(defaults.server_port),
+            hotkeys,
+        })
+    }
 }
 
 impl Default for ClientConfig {
@@ -22,7 +55,7 @@ impl Default for ClientConfig {
         Self {
             server_host: "127.0.0.1".into(),
             server_port: 17890,
-            hotkey: "CommandOrControl+Shift+S".into(),
+            hotkeys: vec!["CommandOrControl+Shift+S".into()],
         }
     }
 }
@@ -45,29 +78,50 @@ fn load_config(app: &AppHandle) -> ClientConfig {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct HotkeyStatus {
+    pub hotkey: String,
+    /// Whether this accelerator is registered and firing.
+    pub active: bool,
+    /// Last registration failure for this accelerator, if any.
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ClientState {
     pub config: ClientConfig,
-    /// Whether a hotkey is currently registered and working.
-    pub hotkey_active: bool,
-    /// Last registration failure, if any (kept until a save succeeds).
-    pub hotkey_error: Option<String>,
+    /// Per-hotkey registration status, mirroring `config.hotkeys`.
+    pub hotkeys: Vec<HotkeyStatus>,
     /// macOS screen-recording permission; always true elsewhere.
     pub screen_permission: bool,
     pub platform: String,
 }
 
+#[derive(Clone)]
+pub struct RegisteredHotkey {
+    pub accelerator: String,
+    /// Live registration; None when registration failed (kept for display + retry).
+    pub shortcut: Option<Shortcut>,
+    pub error: Option<String>,
+}
+
 pub struct AppState {
     pub config: Mutex<ClientConfig>,
-    /// Currently registered shortcut; None when registration never succeeded.
-    pub registered: Mutex<Option<Shortcut>>,
-    pub hotkey_error: Mutex<Option<String>>,
+    pub registered: Mutex<Vec<RegisteredHotkey>>,
 }
 
 fn snapshot(state: &State<'_, AppState>) -> ClientState {
+    let registered = state.registered.lock();
     ClientState {
         config: state.config.lock().clone(),
-        hotkey_active: state.registered.lock().is_some(),
-        hotkey_error: state.hotkey_error.lock().clone(),
+        hotkeys: registered
+            .iter()
+            .map(|r| HotkeyStatus {
+                hotkey: r.accelerator.clone(),
+                active: r.shortcut.is_some(),
+                error: r.error.clone(),
+            })
+            .collect(),
         screen_permission: screen_capture_permitted(),
         platform: std::env::consts::OS.into(),
     }
@@ -180,6 +234,37 @@ const RESERVED: &[&str] = &[
     "CommandOrControl+Alt+Delete",
 ];
 
+/// Single keys (no modifier) allowed as global hotkeys: function-class keys
+/// whose global hijack cannot break typing or text editing. Keep in sync with
+/// SINGLE_KEY_WHITELIST in HotkeyRecorder.tsx.
+const SINGLE_KEY_WHITELIST: &[&str] = &[
+    "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+    "PrintScreen", "ScrollLock", "Pause", "Insert",
+];
+
+const MODIFIER_NAMES: &[&str] = &[
+    "commandorcontrol", "command", "control", "ctrl", "cmd",
+    "shift", "alt", "option", "meta", "super",
+];
+
+/// A bare single key (no modifier) must be on the function-key whitelist;
+/// printable/editing keys would be swallowed system-wide and break typing.
+fn check_single_key_policy(accelerator: &str) -> Result<(), String> {
+    let parts: Vec<&str> = accelerator.split('+').map(|p| p.trim()).filter(|p| !p.is_empty()).collect();
+    let has_modifier = parts
+        .iter()
+        .any(|p| MODIFIER_NAMES.contains(&p.to_lowercase().as_str()));
+    if has_modifier {
+        return Ok(());
+    }
+    if parts.len() == 1 && SINGLE_KEY_WHITELIST.iter().any(|k| k.eq_ignore_ascii_case(parts[0])) {
+        return Ok(());
+    }
+    Err(format!(
+        "{accelerator} 无效：不带修饰键的单键仅支持功能键类（F1–F12、PrintScreen、ScrollLock、Pause、Insert），其他按键请添加修饰键"
+    ))
+}
+
 fn normalized(accel: &str) -> String {
     accel.split('+').map(|p| p.trim().to_lowercase()).collect::<Vec<_>>().join("+")
 }
@@ -191,6 +276,7 @@ fn try_register(app: &AppHandle, accelerator: &str) -> Result<Shortcut, String> 
     if RESERVED.iter().any(|r| normalized(r) == norm) {
         return Err(format!("{accelerator} 与系统快捷键冲突，请换一个组合"));
     }
+    check_single_key_policy(accelerator)?;
     let shortcut: Shortcut = accelerator
         .parse()
         .map_err(|_| format!("无效的快捷键组合: {accelerator}"))?;
@@ -212,49 +298,70 @@ fn get_state(state: State<'_, AppState>) -> ClientState {
     snapshot(&state)
 }
 
-/// While the recorder input is focused, suspend the global hotkey so the
-/// currently-registered chord reaches the webview (OS routes registered
+/// While any recorder input is focused, suspend ALL global hotkeys so the
+/// currently-registered chords reach the webview (OS routes registered
 /// hotkeys to the app, not the focused window). Resumed on blur.
 #[tauri::command]
 fn set_recording(app: AppHandle, state: State<'_, AppState>, active: bool) {
+    let mut registered = state.registered.lock();
     if active {
-        if let Some(sc) = state.registered.lock().take() {
-            let _ = app.global_shortcut().unregister(sc);
+        for entry in registered.iter_mut() {
+            if let Some(sc) = entry.shortcut.take() {
+                let _ = app.global_shortcut().unregister(sc);
+            }
         }
-    } else if state.registered.lock().is_none() {
-        let hotkey = state.config.lock().hotkey.clone();
-        match try_register(&app, &hotkey) {
-            Ok(sc) => *state.registered.lock() = Some(sc),
-            Err(e) => *state.hotkey_error.lock() = Some(e),
+    } else {
+        for entry in registered.iter_mut() {
+            if entry.shortcut.is_none() {
+                match try_register(&app, &entry.accelerator) {
+                    Ok(sc) => {
+                        entry.shortcut = Some(sc);
+                        entry.error = None;
+                    }
+                    Err(e) => entry.error = Some(e),
+                }
+            }
         }
     }
 }
 
 #[tauri::command]
 fn save_config(app: AppHandle, state: State<'_, AppState>, mut config: ClientConfig) -> Result<ClientState, String> {
-    // Swap hotkey first: register the new chord before dropping the old one.
-    let effective_hotkey = {
-        let current = state.config.lock().hotkey.clone();
-        if normalized(&config.hotkey) == normalized(&current) {
-            current
-        } else {
-            match try_register(&app, &config.hotkey) {
-                Ok(new_sc) => {
-                    if let Some(old) = state.registered.lock().replace(new_sc) {
-                        let _ = app.global_shortcut().unregister(old);
-                    }
-                    *state.hotkey_error.lock() = None;
-                    config.hotkey.clone()
-                }
-                Err(e) => {
-                    // Keep the working hotkey; persist it, not the rejected one.
-                    *state.hotkey_error.lock() = Some(e);
-                    current
-                }
-            }
+    if config.hotkeys.is_empty() {
+        return Err("至少保留一个快捷键".into());
+    }
+    // Dedupe (case/whitespace-insensitive), preserving order.
+    let mut seen = std::collections::HashSet::new();
+    config.hotkeys.retain(|h| seen.insert(normalized(h)));
+
+    // Reconcile registrations with the new list, per-key independent:
+    // unchanged live registrations are kept; removed ones are unregistered;
+    // new or previously-failed ones are (re-)registered. One key's failure
+    // never touches the others.
+    let mut registered = state.registered.lock();
+    let mut kept: Vec<RegisteredHotkey> = Vec::new();
+    for entry in registered.drain(..) {
+        let still_wanted = config.hotkeys.iter().any(|h| normalized(h) == normalized(&entry.accelerator));
+        if still_wanted && entry.shortcut.is_some() {
+            kept.push(entry);
+        } else if let Some(sc) = entry.shortcut {
+            let _ = app.global_shortcut().unregister(sc);
         }
-    };
-    config.hotkey = effective_hotkey;
+    }
+    let mut next: Vec<RegisteredHotkey> = Vec::new();
+    for accel in &config.hotkeys {
+        if let Some(existing) = kept.iter().find(|e| normalized(&e.accelerator) == normalized(accel)) {
+            next.push(existing.clone());
+            continue;
+        }
+        match try_register(&app, accel) {
+            Ok(sc) => next.push(RegisteredHotkey { accelerator: accel.clone(), shortcut: Some(sc), error: None }),
+            Err(e) => next.push(RegisteredHotkey { accelerator: accel.clone(), shortcut: None, error: Some(e) }),
+        }
+    }
+    *registered = next;
+    drop(registered);
+
     *state.config.lock() = config.clone();
     let path = config_path(&app);
     if let Some(dir) = path.parent() {
@@ -291,8 +398,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(AppState {
             config: Mutex::new(ClientConfig::default()),
-            registered: Mutex::new(None),
-            hotkey_error: Mutex::new(None),
+            registered: Mutex::new(Vec::new()),
         })
         .on_window_event(|window, event| {
             // Closing the settings window hides it; the client stays resident in the tray.
@@ -335,13 +441,53 @@ pub fn run() {
             let tray = tray.icon(app.default_window_icon().unwrap().clone());
             tray.build(app)?;
 
-            match try_register(app.handle(), &config.hotkey) {
-                Ok(sc) => *app.state::<AppState>().registered.lock() = Some(sc),
-                Err(e) => *app.state::<AppState>().hotkey_error.lock() = Some(e),
+            let mut entries: Vec<RegisteredHotkey> = Vec::new();
+            for accel in &config.hotkeys {
+                match try_register(app.handle(), accel) {
+                    Ok(sc) => entries.push(RegisteredHotkey { accelerator: accel.clone(), shortcut: Some(sc), error: None }),
+                    Err(e) => entries.push(RegisteredHotkey { accelerator: accel.clone(), shortcut: None, error: Some(e) }),
+                }
             }
+            *app.state::<AppState>().registered.lock() = entries;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![get_state, save_config, test_connection, set_recording])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_single_hotkey_migrates_to_list() {
+        let cfg: ClientConfig = serde_json::from_str(
+            r#"{"serverHost":"192.168.1.5","serverPort":17890,"hotkey":"CommandOrControl+Shift+A"}"#,
+        )
+        .unwrap();
+        assert_eq!(cfg.server_host, "192.168.1.5");
+        assert_eq!(cfg.hotkeys, vec!["CommandOrControl+Shift+A".to_string()]);
+    }
+
+    #[test]
+    fn new_format_loads_as_is_and_empty_falls_back() {
+        let cfg: ClientConfig = serde_json::from_str(
+            r#"{"serverHost":"h","serverPort":1,"hotkeys":["F5","Ctrl+Alt+Q"]}"#,
+        )
+        .unwrap();
+        assert_eq!(cfg.hotkeys, vec!["F5".to_string(), "Ctrl+Alt+Q".to_string()]);
+        let cfg: ClientConfig = serde_json::from_str(r#"{"hotkeys":[]}"#).unwrap();
+        assert_eq!(cfg.hotkeys, ClientConfig::default().hotkeys);
+    }
+
+    #[test]
+    fn single_key_policy() {
+        assert!(check_single_key_policy("F5").is_ok());
+        assert!(check_single_key_policy("PrintScreen").is_ok());
+        assert!(check_single_key_policy("S").is_err());
+        assert!(check_single_key_policy("Escape").is_err());
+        assert!(check_single_key_policy("CommandOrControl+Shift+S").is_ok());
+        assert!(check_single_key_policy("Alt+F1").is_ok());
+    }
 }
