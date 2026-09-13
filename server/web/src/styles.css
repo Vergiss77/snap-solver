@@ -172,14 +172,41 @@ body {
 
 .history ul { list-style: none; margin: 0; padding: 0 10px; }
 
+/* 批量操作栏 */
+.history-actions {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px 8px;
+}
+
+.history-actions .spacer { flex: 1; }
+
+button.btn-mini {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-pill);
+}
+
 /* 胶囊条目：1440px 全圆角 */
 .history-item {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: row; align-items: flex-start; gap: 10px;
   margin-bottom: 4px;
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background 0.15s ease;
+}
+
+.history-item .pick {
+  width: 14px; height: 14px;
+  margin: 3px 0 0;
+  flex: none;
+  accent-color: var(--royal-amethyst);
+  cursor: pointer;
+}
+
+.history-item .text {
+  display: flex; flex-direction: column; gap: 4px;
+  flex: 1; min-width: 0;
 }
 
 .history-item:hover { background: var(--paper); }

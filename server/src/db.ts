@@ -119,6 +119,35 @@ export class Store {
 
   // ---- records ----
 
+  /**
+   * Batch-delete sessions (and their records) in one transaction. Unknown ids
+   * are skipped. Returns the delete count and the absolute image paths of the
+   * removed sessions — the caller deletes the files after commit.
+   */
+  deleteSessions(ids: string[]): { deleted: number; imagePaths: string[] } {
+    const imagePaths: string[] = [];
+    let deleted = 0;
+    this.db.exec("BEGIN");
+    try {
+      const sel = this.db.prepare("SELECT image_path FROM sessions WHERE id = ?");
+      const delRecord = this.db.prepare("DELETE FROM records WHERE session_id = ?");
+      const delSession = this.db.prepare("DELETE FROM sessions WHERE id = ?");
+      for (const id of ids) {
+        const row = sel.get(id) as { image_path: string } | undefined;
+        if (!row) continue;
+        delRecord.run(id);
+        delSession.run(id);
+        imagePaths.push(path.join(this.dataDir, row.image_path));
+        deleted += 1;
+      }
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
+    return { deleted, imagePaths };
+  }
+
   insertRecord(rec: {
     sessionId: string;
     quizType: QuizType;

@@ -55,7 +55,12 @@ export class AnalysisScheduler {
   }
 
   emit(kind: SessionEvent["kind"], session: SessionSummary): void {
-    for (const l of this.listeners) l({ kind, session });
+    for (const l of this.listeners) l({ kind, session } as SessionEvent);
+  }
+
+  /** Broadcast that one or more records were deleted; dashboards refetch the list. */
+  emitRecordsChanged(): void {
+    for (const l of this.listeners) l({ kind: "records-changed" });
   }
 
   /** Call after creating a session and on boot recovery. */
@@ -72,6 +77,8 @@ export class AnalysisScheduler {
   }
 
   private async run(id: string): Promise<void> {
+    // Deleted while pending: never start (cancel-on-delete semantics).
+    if (!this.store.getSession(id)) return;
     this.store.setSessionStatus(id, "analyzing");
     this.emit("session.started", this.store.getSession(id)!);
     try {
@@ -85,10 +92,13 @@ export class AnalysisScheduler {
         provider.protocol === "anthropic"
           ? await analyzeAnthropic(image, provider, prompt)
           : await analyzeOpenAI(image, provider, prompt);
+      // Deleted mid-analysis: discard the result, no archive, no event.
+      if (!this.store.getSession(id)) return;
       this.store.setSessionStatus(id, "done", { rawResponse: raw });
       this.archive(id, result);
       this.emit("session.done", this.store.getSession(id)!);
     } catch (err) {
+      if (!this.store.getSession(id)) return; // deleted mid-flight: stay silent
       const message = err instanceof Error ? err.message : String(err);
       this.store.setSessionStatus(id, "failed", { error: message });
       this.emit("session.failed", this.store.getSession(id)!);

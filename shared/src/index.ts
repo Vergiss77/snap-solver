@@ -67,7 +67,9 @@ export interface RecordDetail extends SessionSummary {
 }
 
 /** SSE event payloads pushed over GET /api/events. */
-export interface SessionEvent {
-  kind: "session.created" | "session.started" | "session.done" | "session.failed";
-  session: SessionSummary;
-}
+export type SessionEvent =
+  | {
+      kind: "session.created" | "session.started" | "session.done" | "session.failed";
+      session: SessionSummary;
+    }
+  | { kind: "records-changed" };

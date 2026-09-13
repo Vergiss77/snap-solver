@@ -14,6 +14,8 @@ export function App(): React.JSX.Element {
   const [showConfig, setShowConfig] = useState(false);
   const [newArrival, setNewArrival] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** Checkbox selection for batch ops — browser-session only, never persisted. */
+  const [checkedIds, setCheckedIds] = useState<ReadonlySet<string>>(new Set());
 
   const refresh = useCallback((): void => {
     void api.records().then(setSessions);
@@ -21,6 +23,11 @@ export function App(): React.JSX.Element {
 
   const onEvent = useCallback(
     (e: SessionEvent): void => {
+      if (e.kind === "records-changed") {
+        // Batch delete (from any dashboard): pull the authoritative list.
+        refresh();
+        return;
+      }
       setSessions((prev) => {
         const idx = prev.findIndex((s) => s.id === e.session.id);
         const next = idx >= 0 ? prev.map((s) => (s.id === e.session.id ? e.session : s)) : [e.session, ...prev];
@@ -39,7 +46,7 @@ export function App(): React.JSX.Element {
         setDetail((cur) => (cur && cur.id === e.session.id ? null : cur));
       }
     },
-    [],
+    [refresh],
   );
 
   const connected = useSessionEvents(onEvent, refresh);
@@ -48,11 +55,32 @@ export function App(): React.JSX.Element {
   const viewing = selectedId ?? sessions[0]?.id ?? null;
   const viewingSummary = sessions.find((s) => s.id === viewing) ?? null;
 
+  // Prune checked ids that no longer exist (deleted here or elsewhere).
+  useEffect(() => {
+    setCheckedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const alive = new Set(sessions.map((s) => s.id));
+      const next = new Set([...prev].filter((id) => alive.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [sessions]);
+
   useEffect(() => {
     if (viewing === null) return;
     if (viewingSummary?.status !== "done" && viewingSummary?.status !== "failed") return;
     void api.recordDetail(viewing).then(setDetail);
   }, [viewing, viewingSummary?.status]);
+
+  const deleteChecked = (): void => {
+    const ids = [...checkedIds];
+    if (ids.length === 0) return;
+    if (!window.confirm(`将删除 ${ids.length} 条题目及其截图，不可恢复。确定删除？`)) return;
+    void api.batchDeleteRecords(ids).then(() => {
+      setCheckedIds(new Set());
+      // If the pinned entry was deleted, fall back to follow-latest.
+      setSelectedId((cur) => (cur !== null && ids.includes(cur) ? null : cur));
+    });
+  };
 
   return (
     <div className="app">
@@ -103,6 +131,19 @@ export function App(): React.JSX.Element {
               setSelectedId(id);
               setDrawerOpen(false);
             }}
+            checkedIds={checkedIds}
+            onToggleCheck={(id) =>
+              setCheckedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })
+            }
+            onCheckAll={(checked) =>
+              setCheckedIds(checked ? new Set(sessions.map((s) => s.id)) : new Set())
+            }
+            onDeleteChecked={deleteChecked}
           />
           {viewingSummary ? (
             <SessionView

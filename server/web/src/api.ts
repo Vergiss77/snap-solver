@@ -16,6 +16,12 @@ export interface ServerSettings {
 export const api = {
   records: () => req<SessionSummary[]>("/api/records"),
   recordDetail: (id: string) => req<RecordDetail>(`/api/records/${id}`),
+  batchDeleteRecords: (ids: string[]) =>
+    req<{ deleted: number }>("/api/records/batch-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }),
   providers: () => req<ProviderConfig[]>("/api/providers"),
   saveProvider: (p: { id?: string } & Omit<ProviderConfig, "id" | "isActive">) =>
     req<ProviderConfig>("/api/providers", {

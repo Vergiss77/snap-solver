@@ -55,6 +55,25 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   app.get("/api/records", () => store.listRecords());
 
+  // Batch delete: removes session rows, records and image files. Idempotent —
+  // unknown ids are skipped. Not static-file-cache friendly as GET, hence POST.
+  app.post("/api/records/batch-delete", async (req, reply) => {
+    const body = req.body as { ids?: unknown };
+    if (!Array.isArray(body.ids) || body.ids.length === 0 || !body.ids.every((i) => typeof i === "string")) {
+      return reply.code(400).send({ error: "ids must be a non-empty string array" });
+    }
+    const { deleted, imagePaths } = store.deleteSessions(body.ids as string[]);
+    for (const p of imagePaths) {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        /* image already gone */
+      }
+    }
+    scheduler.emitRecordsChanged();
+    return { deleted };
+  });
+
   app.get("/api/records/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
     const detail = store.getRecordDetail(id);
